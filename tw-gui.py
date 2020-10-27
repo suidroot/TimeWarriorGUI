@@ -40,9 +40,7 @@ def call_tw(tw_command, starttime='', stoptime='', date='', taskdesc=''):
         cli.extend(["start"])
         cli.extend(taskdesc)
     elif tw_command == 'meeting':
-        taskdesc = get_calendar_entry()
-        cli.extend(["start"])
-        cli.extend(taskdesc)
+        cli.extend(["start", get_calendar_entry()])
     elif tw_command == 'starttime':
         cli.extend(["start", starttime])
         cli.extend(taskdesc)
@@ -154,7 +152,7 @@ def main():
         if event == 'Start Meeting':
             result = call_tw('meeting')
             result_display = "Started meeting"
-        elif event == 'Start':
+        elif event in 'Start':
             if (values['starttime'] != ''):
                 result = call_tw('starttime', 
                     starttime=values['starttime'], 
