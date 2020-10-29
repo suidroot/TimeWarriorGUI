@@ -1,16 +1,39 @@
 #!/usr/bin/which python3
+'''
+This Script provide a GUI front-end to the TimeWarror CLI application
+Author: Ben Mason
+'''
 
-import PySimpleGUI as sg
 import subprocess
 from datetime import datetime
+import PySimpleGUI as sg
+
 # Text encoding
-encoding = 'utf-8'
+ENCODING = 'utf-8'
 # fontSize = 12
-debug=False
-theme="Dark Grey 4"
+DEBUG=False
+THEME="Dark Grey 4"
 
 my_tags = ["", "status", "usergroup", "teammeeting" ]
 
+''' Get current calendar '''
+def get_calendar_entry():
+    cli = ['/usr/local/bin/icalbuddy',
+        '-npn', '-ea', '-nc', '-b', '',
+        '-ps', '" - "',
+        '-eep', 'url,location,notes,attendees,datetime',
+        '-ic', 'Calendar', 'eventsNow', ]
+    if DEBUG:
+        print (cli)
+
+    process = subprocess.Popen(cli, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = process.communicate()
+
+    if DEBUG:
+        print(stdout)
+        print(stderr)
+
+    return str(stdout, ENCODING)
 
 def validate_date(date_text):
     return_val = False
@@ -19,7 +42,7 @@ def validate_date(date_text):
         datetime.strptime(date_text, '%Y-%m-%d')
     except ValueError:
         return_val = True
-        
+
     return return_val
 
 def validate_time(time_text):
@@ -29,7 +52,7 @@ def validate_time(time_text):
         datetime.strptime(time_text, '%H:%M')
     except ValueError:
         return_val = True
-        
+
     return return_val
 
 ''' Executing TW CLI '''
@@ -50,13 +73,12 @@ def call_tw(tw_command, starttime='', stoptime='', date='', taskdesc='', taskid=
             stoptime = date + "T" + stoptime
         cli.extend(['track' , starttime, '-', stoptime])
         cli.extend(taskdesc)
-    elif tw_command == 'stop':   
+    elif tw_command == 'stop':
         cli.append("stop")
     elif tw_command == 'continue':
         cli.append("continue")
     elif tw_command == 'modify':
         cli_temp = ['modify']
-        
         if starttime != '':
             cli_temp.extend(['start', starttime])
         if stoptime != '':
@@ -65,51 +87,26 @@ def call_tw(tw_command, starttime='', stoptime='', date='', taskdesc='', taskid=
 
         cli.extend(cli_temp)
 
-    if (debug): 
+    if DEBUG:
         print(cli)
 
     process = subprocess.Popen(cli, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
 
-    if (debug): 
-        print(stdout)
-
-    return stdout
-
-''' Get current calendar '''
-def get_calendar_entry():
-
-    cli = ['/usr/local/bin/icalbuddy',
-        '-npn', 
-        '-ea', 
-        '-nc', 
-        '-b', '', 
-        '-ps', '" - "',
-        '-eep', 'url,location,notes,attendees,datetime',
-        '-ic', 'Calendar',
-        'eventsNow', ]
-
-    if (debug): 
-        print (cli)
-
-    process = subprocess.Popen(cli, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, stderr = process.communicate()
-
-    if (debug): 
+    if DEBUG:
         print(stdout)
         print(stderr)
 
-    return str(stdout, encoding)
-
+    return stdout
 
 ''' Main Function '''
 def main():
 
     fields = [ "date", "starttime", "stoptime", "taskdesc", "tag" ]
 
-    sg.theme(theme)
+    sg.theme(THEME)
     # Define the window's contents
-    layout = [  
+    layout = [
             [ sg.Text("Task:"), sg.Input(key="taskdesc") ],
             #[ sg.Text("Tag:"), sg.Input(key="tag", size=(10,1)) ],
             [ sg.Text("Tag:"), sg.Combo(my_tags, key="tag", size=(10,1)) ],
@@ -138,15 +135,15 @@ def main():
             break
 
         if values['date'] != '':
-            if (validate_date(values['date'])):
+            if validate_date(values['date']):
                 sg.popup('Invalid date please use format "YYYY-MM-DD" data entered:', values['date'])
                 continue
         if values['starttime'] != '':
-            if (validate_time(values['starttime'])):
+            if validate_time(values['starttime']):
                 sg.popup('Invalid date please use format "HH:MM" data entered:', values['starttime'])
                 continue
         if values['stoptime'] != '':
-            if (validate_time(values['stoptime'])):
+            if validate_time(values['stoptime']):
                 sg.popup('Invalid date please use format "HH:MM" data entered:', values['stoptime'])
                 continue
 
@@ -163,18 +160,17 @@ def main():
             result = call_tw('meeting')
             result_display = "Started meeting"
         elif event in 'Start':
-            if (values['starttime'] != ''):
+            if values['starttime'] != '':
                 result = call_tw('starttime', starttime=values['starttime'], taskdesc=task_description)
                 result_display = "Started: " + values['taskdesc'] + " at " + values['starttime']
             else:
-                result = call_tw('startnow', 
-                    taskdesc=task_description)
+                result = call_tw('startnow', taskdesc=task_description)
                 result_display = "Started: " + values['taskdesc']
         elif event == 'Track':
             result = call_tw('track', date=values['date'], starttime=values['starttime'], stoptime=values['stoptime'], taskdesc=task_description)
             result_display = "Tracked: " + values['taskdesc']
         elif event == 'Stop':
-            if (values['stoptime'] != ''):
+            if values['stoptime'] != '':
                 result = call_tw('stop', stoptime=values['stoptime'])
             else:
                 result = call_tw('stop')
@@ -184,7 +180,7 @@ def main():
             result_display = "Continuing last Task"
         elif event == 'Modify':
             result = call_tw('modify', starttime=values['starttime'], stoptime=values['stoptime'])
-            
+
             result_display = "Modifed: Last task. New"
             if values['starttime'] != '':
                 result_display += " start:" + values['starttime']
@@ -197,7 +193,7 @@ def main():
 
         # Return results and Status
         window['status_result'].update(result_display)
-        window['cliout'].update(str(result, encoding))
+        window['cliout'].update(str(result, ENCODING))
 
         # clear input fields
         for i in fields:
