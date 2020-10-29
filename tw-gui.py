@@ -33,7 +33,7 @@ def validate_time(time_text):
     return return_val
 
 ''' Executing TW CLI '''
-def call_tw(tw_command, starttime='', stoptime='', date='', taskdesc=''):
+def call_tw(tw_command, starttime='', stoptime='', date='', taskdesc='', taskid='@1'):
     cli = ['timew']
 
     if tw_command == 'startnow':
@@ -54,7 +54,17 @@ def call_tw(tw_command, starttime='', stoptime='', date='', taskdesc=''):
         cli.append("stop")
     elif tw_command == 'continue':
         cli.append("continue")
-    
+    elif tw_command == 'modify':
+        cli_temp = ['modify']
+        
+        if starttime != '':
+            cli_temp.extend(['start', starttime])
+        if stoptime != '':
+            cli_temp.extend(['stop', stoptime])
+        cli_temp.append(taskid)
+
+        cli.extend(cli_temp)
+
     if (debug): 
         print(cli)
 
@@ -110,7 +120,7 @@ def main():
             ], title='Date')],
             [ sg.Text("")],
             [ sg.Button('Start Meeting'), sg.Button('Track'), sg.Button('Continue') ],
-            [ sg.Button('Start'), sg.Button('Stop'), sg.Button('Curr Running') ],
+            [ sg.Button('Start'), sg.Button('Stop'), sg.Button('Modify'), sg.Button('Curr Running'), ],
             [ sg.Text(size=(40,1), key='status_result') ],
             [ sg.MLine(key="cliout", size=(40,8)) ]
         ]
@@ -154,31 +164,33 @@ def main():
             result_display = "Started meeting"
         elif event in 'Start':
             if (values['starttime'] != ''):
-                result = call_tw('starttime', 
-                    starttime=values['starttime'], 
-                    taskdesc=task_description)
+                result = call_tw('starttime', starttime=values['starttime'], taskdesc=task_description)
                 result_display = "Started: " + values['taskdesc'] + " at " + values['starttime']
             else:
                 result = call_tw('startnow', 
                     taskdesc=task_description)
                 result_display = "Started: " + values['taskdesc']
         elif event == 'Track':
-            result = call_tw('track',
-                date=values['date'],
-                starttime=values['starttime'], 
-                stoptime=values['stoptime'], 
-                taskdesc=task_description)
+            result = call_tw('track', date=values['date'], starttime=values['starttime'], stoptime=values['stoptime'], taskdesc=task_description)
             result_display = "Tracked: " + values['taskdesc']
         elif event == 'Stop':
             if (values['stoptime'] != ''):
-                result = call_tw('stop', 
-                    stoptime=values['stoptime'])
+                result = call_tw('stop', stoptime=values['stoptime'])
             else:
                 result = call_tw('stop')
             result_display = "Stopped Tracking"
         elif event == 'Continue':
             result = call_tw('continue')
             result_display = "Continuing last Task"
+        elif event == 'Modify':
+            result = call_tw('modify', starttime=values['starttime'], stoptime=values['stoptime'])
+            
+            result_display = "Modifed: Last task. New"
+            if values['starttime'] != '':
+                result_display += " start:" + values['starttime']
+            if values['stoptime'] != '':
+                result_display += " stop: " + values['stoptime']
+
         else:
             result = call_tw('running')
             result_display = "See Results"
