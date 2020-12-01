@@ -15,13 +15,12 @@ ENCODING = 'utf-8'
 DEBUG=False
 THEME="Dark Grey 4"
 
-my_tags = ["", "status", "usergroup", "teammeeting" ]
 timew_sum_columns = ['Tags', 'Duration']
 
 
-def get_active_timer():
-
-    cli = ['timew']
+def execute_cli(cli):
+    if DEBUG:
+        print(cli)
 
     process = subprocess.Popen(cli, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
@@ -29,6 +28,14 @@ def get_active_timer():
     if DEBUG:
         print(stdout)
         print(stderr)
+
+    return stdout
+
+
+def get_active_timer():
+
+    cli = ['timew']
+    stdout = execute_cli(cli)
 
     output_list = str(stdout, ENCODING).split("\n")
     if DEBUG:
@@ -52,19 +59,14 @@ def get_calendar_entry():
     if DEBUG:
         print (cli)
 
-    process = subprocess.Popen(cli, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, stderr = process.communicate()
-
-    if DEBUG:
-        print(stdout)
-        print(stderr)
+    stdout = execute_cli(cli)
 
     return str(stdout, ENCODING)
 
 ''' Gather Tracked tiume entries and return table '''
-def run_timew_sum():
+def collect_tasks_from_today():
+
     expression_1 = '^(.{19})(.+)\s(\d{1,2}:\d{1,2}:\d{1,2})\s{1,2}(\d{1,2}\:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})'
-    #expression_1 = '(^.{19})(.+)\s(\d{1,2}:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})'
     expression_2 = '(^.{19})(.+)\s(\d{1,2}:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})'
 
     result = []
@@ -72,8 +74,7 @@ def run_timew_sum():
 
     cli = ['timew', 'summary']
 
-    process = subprocess.Popen(cli, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, stderr = process.communicate()
+    stdout = execute_cli(cli)
 
     output_list = str(stdout, ENCODING).split("\n")
 
@@ -145,50 +146,6 @@ def validate_time(time_text):
 
     return return_val
 
-''' Executing TW CLI '''
-def call_tw(tw_command, starttime='', stoptime='', date='', taskdesc='', taskid='@1'):
-    cli = ['timew']
-
-    if tw_command == 'startnow':
-        cli.extend(["start"])
-        cli.extend(taskdesc)
-    elif tw_command == 'meeting':
-        cli.extend(["start", get_calendar_entry()])
-    elif tw_command == 'starttime':
-        cli.extend(["start", starttime])
-        cli.extend(taskdesc)
-    elif tw_command == 'track':
-        if date != '':
-            starttime = date + "T" + starttime
-            stoptime = date + "T" + stoptime
-        cli.extend(['track' , starttime, '-', stoptime])
-        cli.extend(taskdesc)
-    elif tw_command == 'stop':
-        cli.append("stop")
-    elif tw_command == 'continue':
-        cli.append("continue")
-    elif tw_command == 'modify':
-        cli_temp = ['modify']
-        if starttime != '':
-            cli_temp.extend(['start', starttime])
-        if stoptime != '':
-            cli_temp.extend(['stop', stoptime])
-        cli_temp.append(taskid)
-
-        cli.extend(cli_temp)
-
-    if DEBUG:
-        print(cli)
-
-    process = subprocess.Popen(cli, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, stderr = process.communicate()
-
-    if DEBUG:
-        print(stdout)
-        print(stderr)
-
-    return stdout
-
 ''' Main Function '''
 def main():
 
@@ -196,7 +153,7 @@ def main():
 
     #
     # Load inital tracked time data
-    table_data, tag_len = run_timew_sum()
+    table_data, tag_len = collect_tasks_from_today()
     active_timer = get_active_timer()
 
 
@@ -208,22 +165,20 @@ def main():
     #
     # Define the window's contents
     layout = [
-            [ sg.Text("Task:"), sg.Input(key="taskdesc") ],
-            #[ sg.Text("Tag:"), sg.Input(key="tag", size=(10,1)) ],
-            #[ sg.Text("Tag:"), sg.Combo(my_tags, key="tag", size=(10,1)) ],
+            [ sg.Text("Task:"), sg.Input(key="taskdesc", size=(35,1)) ],
             [ sg.Frame(layout=[
                 [ sg.Text("Start Time:"), sg.Input(key="starttime", size=(12,1)), sg.Text("EX: 15:00") ],
                 [ sg.Text("Stop time:"), sg.Input(key="stoptime", size=(12,1)), sg.Text("EX: 15:00") ],
                 [ sg.Text("Date: "), sg.Input(key="date", size=(12,1)), sg.Text("EX: 2020-10-01") ]
             ], title='Date')],
             [ sg.Text("")],
-            [ sg.Button('Start Meeting'), sg.Button('Track'), sg.Button('Continue') ],
-            [ sg.Button('Start'), sg.Button('Stop'), sg.Button('Modify'), sg.Button('Curr Running'), ],
+            [ sg.Button('Start'), sg.Button('Stop'), sg.Button('Modify Start'), sg.Button('Curr Running'), ],
+            [ sg.Button('Start Meeting'), sg.Button('Track'), sg.Button('Continue'),  sg.Button('Delete Last'),],
             [ sg.Text(size=(40,1), key='status_result') ],
             [ sg.MLine(key="cliout", size=(40,8)) ],
             [ sg.Text("Current Tracking:" ), sg.Input(key="curr_tracking", size=(25,1), default_text=active_timer) ],
+            [ sg.Text("Todays Time") ],
             [ sg.Table(values=table_data, headings=timew_sum_columns, max_col_width=25,
-                    #auto_size_columns=True,
                     display_row_numbers=False,
                     justification='left',
                     num_rows=20,
@@ -264,48 +219,65 @@ def main():
                 sg.popup('Invalid date please use format "HH:MM" data entered:', values['stoptime'])
                 continue
 
-        task_description = [ '"' + values['taskdesc'] + '"' ]
-
         #
         # Button Logic
+        cli = ['timew']
+
         if event == 'Start Meeting':
-            result = call_tw('meeting')
+            cli.extend(["start", get_calendar_entry()])
             result_display = "Started meeting"
+
         elif event in 'Start':
+            cli.append("start")
             if values['starttime'] != '':
-                result = call_tw('starttime', starttime=values['starttime'], taskdesc=task_description)
+                cli.append(values['starttime'])
                 result_display = "Started: " + values['taskdesc'] + " at " + values['starttime']
             else:
-                result = call_tw('startnow', taskdesc=task_description)
                 result_display = "Started: " + values['taskdesc']
+
+            cli.append(values['taskdesc'])
+           
         elif event == 'Track':
-            result = call_tw('track', date=values['date'], starttime=values['starttime'], stoptime=values['stoptime'], taskdesc=task_description)
-            result_display = "Tracked: " + values['taskdesc']
-        elif event == 'Stop':
-            if values['stoptime'] != '':
-                result = call_tw('stop', stoptime=values['stoptime'])
+            if values['date'] != '':
+                starttime = values['date'] + "T" + values['starttime']
+                stoptime = values['date'] + "T" + values['stoptime']
             else:
-                result = call_tw('stop')
-            result_display = "Stopped Tracking"
-        elif event == 'Continue':
-            result = call_tw('continue')
-            result_display = "Continuing last Task"
-        elif event == 'Modify':
-            result = call_tw('modify', starttime=values['starttime'], stoptime=values['stoptime'])
+                startime = values['starttime']
+                stoptime = values['stoptime']
 
-            result_display = "Modifed: Last task. New"
-            if values['starttime'] != '':
-                result_display += " start:" + values['starttime']
+            cli.extend(['track' , startime, '-', stoptime, values['taskdesc']])
+
+            result_display = "Tracked: " + values['taskdesc']
+
+        elif event == 'Stop':
+            cli.append("stop")
+
             if values['stoptime'] != '':
-                result_display += " stop: " + values['stoptime']
+                cli.append(values['stoptime'])
 
+            result_display = "Stopped Tracking"
+
+        elif event == 'Continue':
+            cli.append("continue")
+            result_display = "Continuing last Task"
+
+        elif event == "Modify Start":
+            cli.extend(['modify', 'start', values['starttime'], '@1'])
+
+        elif event == "Delete Last":
+            cli.extend(['delete', '@1'])
         else:
-            result = call_tw('running')
             result_display = "See Results"
         
+
+        result = execute_cli(cli)
+
+        if DEBUG:
+            print(result)
+
         #
         # Update list of tracked time for today
-        table_data, tag_len = run_timew_sum()
+        table_data, tag_len = collect_tasks_from_today()
         window['timew_table'].update(values=table_data)
 
         active_timer = get_active_timer()
