@@ -18,6 +18,30 @@ THEME="Dark Grey 4"
 my_tags = ["", "status", "usergroup", "teammeeting" ]
 timew_sum_columns = ['Tags', 'Duration']
 
+
+def get_active_timer():
+
+    cli = ['timew']
+
+    process = subprocess.Popen(cli, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = process.communicate()
+
+    if DEBUG:
+        print(stdout)
+        print(stderr)
+
+    output_list = str(stdout, ENCODING).split("\n")
+    if DEBUG:
+        print("out time output_list: ", output_list)
+
+    if output_list[0].strip() == "There is no active time tracking.":
+        result = "no active time tracking"
+    else:
+
+        result = output_list[0][9:].replace('"', '')
+
+    return result
+
 ''' Get current calendar '''
 def get_calendar_entry():
     cli = ['/usr/local/bin/icalbuddy',
@@ -173,6 +197,8 @@ def main():
     #
     # Load inital tracked time data
     table_data, tag_len = run_timew_sum()
+    active_timer = get_active_timer()
+
 
     if DEBUG:
         print(tag_len)
@@ -188,13 +214,14 @@ def main():
             [ sg.Frame(layout=[
                 [ sg.Text("Start Time:"), sg.Input(key="starttime", size=(12,1)), sg.Text("EX: 15:00") ],
                 [ sg.Text("Stop time:"), sg.Input(key="stoptime", size=(12,1)), sg.Text("EX: 15:00") ],
-                [ sg.Text("Date:"), sg.Input(key="date", size=(12,1)), sg.Text("EX: 2020-10-01") ]
+                [ sg.Text("Date: "), sg.Input(key="date", size=(12,1)), sg.Text("EX: 2020-10-01") ]
             ], title='Date')],
             [ sg.Text("")],
             [ sg.Button('Start Meeting'), sg.Button('Track'), sg.Button('Continue') ],
             [ sg.Button('Start'), sg.Button('Stop'), sg.Button('Modify'), sg.Button('Curr Running'), ],
             [ sg.Text(size=(40,1), key='status_result') ],
             [ sg.MLine(key="cliout", size=(40,8)) ],
+            [ sg.Text("Current Tracking:" ), sg.Input(key="curr_tracking", size=(25,1), default_text=active_timer) ],
             [ sg.Table(values=table_data, headings=timew_sum_columns, max_col_width=25,
                     #auto_size_columns=True,
                     display_row_numbers=False,
@@ -212,9 +239,7 @@ def main():
     #
     ####### Event Loop
     while True:
-        #
-        # Update list of tracked time for today
-        table_data, tag_len = run_timew_sum()
+
 
         if DEBUG:
             print(table_data)
@@ -277,8 +302,14 @@ def main():
         else:
             result = call_tw('running')
             result_display = "See Results"
-
+        
+        #
+        # Update list of tracked time for today
+        table_data, tag_len = run_timew_sum()
         window['timew_table'].update(values=table_data)
+
+        active_timer = get_active_timer()
+        window['curr_tracking'].update(active_timer)
 
         #
         # Return results and Status
