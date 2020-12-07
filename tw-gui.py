@@ -215,6 +215,10 @@ def main():
     #
     # Load inital tracked time data
     table_data, tag_len = collect_tasks_from_today()
+    # if empty table set correct column and rows
+    if table_data == []:
+        table_data = [[" "*25,""]]
+
     active_timer = get_active_timer()
 
     if DEBUG:
