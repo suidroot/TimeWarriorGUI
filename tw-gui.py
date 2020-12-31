@@ -66,15 +66,15 @@ def get_calendar_entry():
 def collect_tasks_from_today():
     ''' Gather Tracked time entries from today and return table '''
 
-
+    # Matches when more then one time entry exists in a day
     expression_1 = '^(.{19})(.+)\s(\d{1,2}:\d{1,2}:\d{1,2})\s{1,2}(\d{1,2}\:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})'
+    # Matches when only one time entry exists in a day
     expression_2 = '(^.{19})(.+)\s(\d{1,2}:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})'
 
     result = []
     max_tag_len = 0
 
     cli = ['timew', 'summary']
-
     stdout = execute_cli(cli)
 
     output_list = str(stdout, ENCODING).split("\n")
@@ -85,17 +85,15 @@ def collect_tasks_from_today():
     if DEBUG:
         print (end_data)
 
-
     for line in output_list:
-
         if counter != end_data:
             match = re.search(expression_1, line)
             if DEBUG:
-                print ("ex1", counter, line)
+                print ("regex1", counter, line)
         else:
             match = re.search(expression_2, line)
             if DEBUG:
-                print ("ex2", counter, line)
+                print ("regex2", counter, line)
 
         entry_dict = {}
 
@@ -201,7 +199,6 @@ def button_logic(event, values):
         result_display = "Deleted last Task"
     else:
         result_display = "Default: See Results"
-
 
     result = execute_cli(cli)
 
