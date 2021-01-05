@@ -67,9 +67,13 @@ def collect_tasks_from_today():
     ''' Gather Tracked time entries from today and return table '''
 
     # Matches when more then one time entry exists in a day
-    expression_1 = '^(.{19})(.+)\s(\d{1,2}:\d{1,2}:\d{1,2})\s{1,2}(\d{1,2}\:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})'
+    #expression_1 = '^(.{18})(.+)\s(\d{1,2}:\d{1,2}:\d{1,2})\s{1,2}(\d{1,2}\:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})'
+    expression_1 = '^(\w{1,3}\s.[0-9\-]+\s\S{3}\s|\s+)(.+)\s(\d{1,2}:\d{1,2}:\d{1,2})\s{1,2}(\d{1,2}\:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})'
+    # 
     # Matches when only one time entry exists in a day
-    expression_2 = '(^.{19})(.+)\s(\d{1,2}:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})'
+    #expression_2 = '(^.{18})(.+)\s(\d{1,2}:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})'
+    expression_2 = '^(\w{1,3}\s.[0-9\-]+\s\S{3}\s|\s+)(.+)\s(\d{1,2}:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})'
+
 
     result = []
     max_tag_len = 0
