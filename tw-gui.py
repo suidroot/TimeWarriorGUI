@@ -76,21 +76,23 @@ def collect_tasks_list(duration='day'):
 
     task_list = json.loads(stdout)
 
-    for i in task_list:
+    for task_item in task_list:
         date_format = "%Y%m%dT%H%M%SZ"
 
-        # Calculate Duration
-        if 'end' in i.keys():
-            start_date = datetime.strptime(i['start'], date_format)
-            end_date = datetime.strptime(i['end'], date_format)
+        # Calculate Duration (skip or active)
+        if 'end' in task_item.keys():
+            start_date = datetime.strptime(task_item['start'], date_format)
+            end_date = datetime.strptime(task_item['end'], date_format)
             duration = end_date - start_date
+        else:
+            duration = "active"
 
-            table_data.append([i['tags'][0] , str(duration)])
+        table_data.append([task_item['tags'][0] , str(duration)])
 
-            if max_tag_len < len(i['tags']):
-                    max_tag_len = len(i['tags'])
+        if max_tag_len < len(task_item['tags']):
+                max_tag_len = len(task_item['tags'])
 
-    NO_OF_TASKS_TRACKED=len(table_data)
+    NO_OF_TASKS_TRACKED = len(table_data)
 
     return table_data, max_tag_len
 
@@ -129,8 +131,8 @@ def button_logic(event, values):
         result_display = "Started meeting"
 
     elif event in 'Start':
-
         cli.append("start")
+
         if values['starttime'] != '':
             cli.append(values['starttime'])
             result_display = "Started: " + values['taskdesc'] + " at " + values['starttime']
@@ -154,37 +156,30 @@ def button_logic(event, values):
 
     elif event == 'Stop':
         cli.append("stop")
+
         if values['stoptime'] != '':
             cli.append(values['stoptime'])
         result_display = "Stopped Tracking"
 
-    elif event == 'Continue':
-        cli.append("continue")
-
-        if values['timew_table'] != []:
-            task_no = NO_OF_TASKS_TRACKED - values['timew_table'][0]
-            cli.append('@'+str(task_no))
-
-            result_display = "Continuing @" + str(task_no)
-        else:
-            result_display = "Continuing last Task"
-
+    # Modify start of current / last task
     elif event == "Modify Start":
         cli.extend(['modify', 'start', values['starttime'], '@1'])
         result_display = "Modified Start time to " + values['starttime']
 
-    elif event == "Delete Last":
-
-        cli.append("delete")
+    elif event == 'Continue' or event == "Delete":
+        command = event.lower()
+        cli.append(command)
 
         if values['timew_table'] != []:
             task_no = NO_OF_TASKS_TRACKED - values['timew_table'][0]
             cli.append('@'+str(task_no))
-            result_display = "Deleted @" + str(task_no)
+
+            result_display = command + " @" + str(task_no)
         else:
-            cli.append("@1")
-            result_display = "Deleted last Task"
-    
+            cli.append('@1')
+
+            result_display = command + " last task"
+
     else:
         result_display = "Default: See Results"
 
@@ -223,7 +218,7 @@ def main():
             ], title='Date')],
             [ sg.Text("")],
             [ sg.Button('Start'), sg.Button('Stop'), sg.Button('Modify Start'), sg.Button('Curr Running'), ],
-            [ sg.Button('Start Meeting'), sg.Button('Track'), sg.Button('Continue'),  sg.Button('Delete Last'),],
+            [ sg.Button('Start Meeting'), sg.Button('Track'), sg.Button('Continue'),  sg.Button('Delete'),],
             [ sg.Text(size=(40,1), key='status_result') ],
             [ sg.MLine(key="cliout", size=(40,8)) ],
             [ sg.Text("Current Tracking:" ), sg.Input(key="curr_tracking", size=(25,1), default_text=active_timer) ],
