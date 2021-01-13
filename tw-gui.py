@@ -5,7 +5,7 @@
 '''
 
 import subprocess
-import re
+import json
 from datetime import datetime
 import PySimpleGUI as sg
 
@@ -14,6 +14,7 @@ ENCODING = 'utf-8'
 # fontSize = 12
 DEBUG=False
 THEME="Dark Grey 4"
+NO_OF_TASKS_TRACKED=0
 
 def execute_cli(cli):
     ''' Execute commands on CLI returns STDOUT '''
@@ -29,7 +30,6 @@ def execute_cli(cli):
         print(stderr)
 
     return stdout
-
 
 def get_active_timer():
     ''' Get Actively tracked task '''
@@ -63,69 +63,37 @@ def get_calendar_entry():
 
     return str(stdout, ENCODING)
 
-def collect_tasks_from_today():
-    ''' Gather Tracked time entries from today and return table '''
+def collect_tasks_list(duration='day'):
+    ''' Collect list of tracked tasks (default to today) '''
 
-    # Matches when more then one time entry exists in a day
-    #expression_1 = '^(.{18})(.+)\s(\d{1,2}:\d{1,2}:\d{1,2})\s{1,2}(\d{1,2}\:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})'
-    expression_1 = '^(\w{1,3}\s.[0-9\-]+\s\S{3}\s|\s+)(.+)\s(\d{1,2}:\d{1,2}:\d{1,2})\s{1,2}(\d{1,2}\:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})'
-    # 
-    # Matches when only one time entry exists in a day
-    #expression_2 = '(^.{18})(.+)\s(\d{1,2}:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})'
-    expression_2 = '^(\w{1,3}\s.[0-9\-]+\s\S{3}\s|\s+)(.+)\s(\d{1,2}:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})\s(\d{1,2}\:\d{1,2}:\d{1,2})'
+    global NO_OF_TASKS_TRACKED
 
-
-    result = []
     max_tag_len = 0
-
-    cli = ['timew', 'summary']
-    stdout = execute_cli(cli)
-
-    output_list = str(stdout, ENCODING).split("\n")
-
-    counter = 0
-    end_data = len(output_list)-5
-
-    if DEBUG:
-        print (end_data)
-
-    for line in output_list:
-        if counter != end_data:
-            match = re.search(expression_1, line)
-            if DEBUG:
-                print ("regex1", counter, line)
-        else:
-            match = re.search(expression_2, line)
-            if DEBUG:
-                print ("regex2", counter, line)
-
-        entry_dict = {}
-
-        if match:
-            entry_dict['tag'] = match.group(2).strip()
-            entry_dict['start_time'] = match.group(3)
-            entry_dict['stop_time'] = match.group(4)
-            entry_dict['duration'] = match.group(5)
-
-            if max_tag_len < len(entry_dict['tag']):
-                max_tag_len = len(entry_dict['tag'])
-
-            if DEBUG:
-                print ("matched data: ", entry_dict)
-
-            result.append(entry_dict)
-
-        counter += 1
-
-    if DEBUG:
-        print (result)
-
     table_data = []
 
-    for i in result:
-        table_data.append([i['tag'] , i['duration']])
+    cli = ['timew', 'export', ':'+duration]
+    stdout = execute_cli(cli)
+
+    task_list = json.loads(stdout)
+
+    for i in task_list:
+        date_format = "%Y%m%dT%H%M%SZ"
+
+        # Calculate Duration
+        if 'end' in i.keys():
+            start_date = datetime.strptime(i['start'], date_format)
+            end_date = datetime.strptime(i['end'], date_format)
+            duration = end_date - start_date
+
+            table_data.append([i['tags'][0] , str(duration)])
+
+            if max_tag_len < len(i['tags']):
+                    max_tag_len = len(i['tags'])
+
+    NO_OF_TASKS_TRACKED=len(table_data)
 
     return table_data, max_tag_len
+
 
 def validate_date(date_text):
     ''' Validate Date is correct format '''
@@ -192,15 +160,31 @@ def button_logic(event, values):
 
     elif event == 'Continue':
         cli.append("continue")
-        result_display = "Continuing last Task"
+
+        if values['timew_table'] != []:
+            task_no = NO_OF_TASKS_TRACKED - values['timew_table'][0]
+            cli.append('@'+str(task_no))
+
+            result_display = "Continuing @" + str(task_no)
+        else:
+            result_display = "Continuing last Task"
 
     elif event == "Modify Start":
         cli.extend(['modify', 'start', values['starttime'], '@1'])
         result_display = "Modified Start time to " + values['starttime']
 
     elif event == "Delete Last":
-        cli.extend(['delete', '@1'])
-        result_display = "Deleted last Task"
+
+        cli.append("delete")
+
+        if values['timew_table'] != []:
+            task_no = NO_OF_TASKS_TRACKED - values['timew_table'][0]
+            cli.append('@'+str(task_no))
+            result_display = "Deleted @" + str(task_no)
+        else:
+            cli.append("@1")
+            result_display = "Deleted last Task"
+    
     else:
         result_display = "Default: See Results"
 
@@ -215,7 +199,7 @@ def main():
 
     #
     # Load inital tracked time data
-    table_data, tag_len = collect_tasks_from_today()
+    table_data, tag_len = collect_tasks_list()
     # if empty table set correct column and rows
     if table_data == []:
         table_data = [[" "*25,""]]
@@ -298,7 +282,7 @@ def main():
 
         #
         # Update list of tracked time for today
-        table_data, tag_len = collect_tasks_from_today()
+        table_data, tag_len = collect_tasks_list()
         window['timew_table'].update(values=table_data)
 
         active_timer = get_active_timer()
