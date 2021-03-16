@@ -166,6 +166,28 @@ def button_logic(event, values):
         cli.extend(['modify', 'start', values['starttime'], '@1'])
         result_display = "Modified Start time to " + values['starttime']
 
+    elif event == "Rename":
+        if values['timew_table'] != []:
+            table_no = values['timew_table'][0]
+            task_no = NO_OF_TASKS_TRACKED - table_no
+            taskid = '@'+str(task_no)
+        else:
+            taskid = '@1'
+            table_no = NO_OF_TASKS_TRACKED-1
+
+        table_data, tag_len = collect_tasks_list()
+        old_description = table_data[table_no][0]
+
+        ### Open window
+        new_description = sg.popup_get_text('Rename Task', default_text=old_description)
+
+        if (new_description != None):
+            result = execute_cli(['timew', 'tag', taskid, new_description])
+            cli = ['timew', 'untag', taskid, old_description]
+            result_display = "Renamed task"
+        else:
+            result_display= "Rename Canceled"
+
     elif event == 'Continue' or event == "Delete":
         command = event.lower()
         cli.append(command)
@@ -219,6 +241,7 @@ def main():
             [ sg.Text("")],
             [ sg.Button('Start'), sg.Button('Stop'), sg.Button('Modify Start'), sg.Button('Curr Running'), ],
             [ sg.Button('Start Meeting'), sg.Button('Track'), sg.Button('Continue'),  sg.Button('Delete'),],
+            [ sg.Button('Rename') ], 
             [ sg.Text(size=(40,1), key='status_result') ],
             [ sg.MLine(key="cliout", size=(40,8)) ],
             [ sg.Text("Current Tracking:" ), sg.Input(key="curr_tracking", size=(25,1), default_text=active_timer) ],
