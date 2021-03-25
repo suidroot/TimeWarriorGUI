@@ -9,11 +9,15 @@ import json
 from datetime import datetime
 import PySimpleGUI as sg
 
-# Text encoding
-ENCODING = 'utf-8'
-# fontSize = 12
-DEBUG=False
+# Astetics
 THEME="Dark Grey 4"
+GLOBAL_FONT='Any 11'
+
+# Enable Debug output
+DEBUG=False
+
+# Global Constants
+ENCODING = 'utf-8'
 NO_OF_TASKS_TRACKED=0
 
 def execute_cli(cli):
@@ -232,26 +236,26 @@ def main():
     timew_summary_columns = ['Tags', 'Duration']
 
     layout = [
-            [ sg.Text("Task:"), sg.Input(key="taskdesc", size=(35,1)) ],
+            [ sg.Text("Task:", font=GLOBAL_FONT), sg.Input(key="taskdesc", size=(35,1), font=GLOBAL_FONT) ],
             [ sg.Frame(layout=[
-                [ sg.Text("Start Time:"), sg.Input(key="starttime", size=(12,1)), sg.Text("EX: 15:00") ],
-                [ sg.Text("Stop time:"), sg.Input(key="stoptime", size=(12,1)), sg.Text("EX: 15:00") ],
-                [ sg.Text("Date: "), sg.Input(key="date", size=(12,1)), sg.Text("EX: 2020-10-01") ]
+                [ sg.Text("Start Time:", font=GLOBAL_FONT), sg.Input(key="starttime", size=(12,1), font=GLOBAL_FONT), sg.Text("EX: 15:00", font=GLOBAL_FONT) ],
+                [ sg.Text("Stop time:", font=GLOBAL_FONT), sg.Input(key="stoptime", size=(12,1), font=GLOBAL_FONT), sg.Text("EX: 15:00", font=GLOBAL_FONT) ],
+                [ sg.Text("Date: ", font=GLOBAL_FONT), sg.Input(key="date", size=(12,1), font=GLOBAL_FONT), sg.Text("EX: 2020-10-01", font=GLOBAL_FONT) ]
             ], title='Date')],
-            [ sg.Text("")],
-            [ sg.Button('Start'), sg.Button('Stop'), sg.Button('Modify Start'), sg.Button('Curr Running'), ],
-            [ sg.Button('Start Meeting'), sg.Button('Track'), sg.Button('Continue'),  sg.Button('Delete'),],
-            [ sg.Button('Rename') ], 
-            [ sg.Text(size=(40,1), key='status_result') ],
-            [ sg.MLine(key="cliout", size=(40,8)) ],
-            [ sg.Text("Current Tracking:" ), sg.Input(key="curr_tracking", size=(25,1), default_text=active_timer) ],
-            [ sg.Text("Todays Time") ],
+            [ sg.Button('Start', font=GLOBAL_FONT), sg.Button('Stop', font=GLOBAL_FONT), sg.Button('Modify Start', font=GLOBAL_FONT), sg.Button('Curr Running', font=GLOBAL_FONT), ],
+            [ sg.Button('Start Meeting', font=GLOBAL_FONT), sg.Button('Track', font=GLOBAL_FONT), sg.Button('Continue', font=GLOBAL_FONT),  sg.Button('Delete', font=GLOBAL_FONT),],
+            [ sg.Button('Rename', font=GLOBAL_FONT) ], 
+            [ sg.Text(size=(40,1), key='status_result', font=GLOBAL_FONT) ],
+            [ sg.MLine(key="cliout", size=(40,8), font=GLOBAL_FONT) ],
+            [ sg.Text("Current Tracking:", font=GLOBAL_FONT), sg.Input(key="curr_tracking", size=(25,1), default_text=active_timer, font=GLOBAL_FONT) ],
+            [ sg.Text("Todays Time", font=GLOBAL_FONT) ],
             [ sg.Table(values=table_data, headings=timew_summary_columns, max_col_width=25,
                     display_row_numbers=False,
                     justification='left',
                     num_rows=20,
                     key='timew_table',
-                    tooltip='Todays Data')]
+                    tooltip='Todays Data', 
+                    font=GLOBAL_FONT)]
         ]
 
     window = sg.Window('Timewarrior Tracking', layout)
