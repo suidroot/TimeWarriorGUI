@@ -4,6 +4,11 @@
     Author: Ben Mason
 '''
 
+__author__ = "Ben Mason"
+__copyright__ = "Copyright 2021"
+__version__ = "1.0.0"
+__email__ = "locutus@the-collective.net"
+__status__ = "Production"
 
 
 import subprocess
