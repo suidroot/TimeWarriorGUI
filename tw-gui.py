@@ -4,8 +4,11 @@
     Author: Ben Mason
 '''
 
+
+
 import subprocess
 import json
+import logging
 from datetime import datetime
 import PySimpleGUI as sg
 
@@ -14,7 +17,9 @@ THEME="Dark Grey 4"
 GLOBAL_FONT='Any 11'
 
 # Enable Debug output
-DEBUG=False
+#LOGGING_LEVEL = logging.ERROR # DEBUG
+LOGGING_LEVEL = logging.DEBUG
+LOGGING_FORMAT = '[%(levelname)s] %(asctime)s - %(funcName)s %(lineno)d - %(message)s'
 
 # Global Constants
 ENCODING = 'utf-8'
@@ -23,15 +28,13 @@ NO_OF_TASKS_TRACKED=0
 def execute_cli(cli):
     ''' Execute commands on CLI returns STDOUT '''
 
-    if DEBUG:
-        print(cli)
+    logging.debug(f"cli: {cli}")
 
     process = subprocess.Popen(cli, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
 
-    if DEBUG:
-        print(stdout)
-        print(stderr)
+    logging.debug(f"stdout: {stdout}")
+    logging.debug(f"stderr: {stderr}")
 
     return stdout
 
@@ -42,8 +45,8 @@ def get_active_timer():
     stdout = execute_cli(cli)
 
     output_list = str(stdout, ENCODING).split("\n")
-    if DEBUG:
-        print("out time output_list: ", output_list)
+
+    logging.debug(f"output_list: {output_list}")
 
     if output_list[0].strip() == "There is no active time tracking.":
         result = "no active time tracking"
@@ -60,9 +63,7 @@ def get_calendar_entry():
         '-ps', '" - "',
         '-eep', 'url,location,notes,attendees,datetime',
         '-ic', 'Calendar', 'eventsNow', ]
-    if DEBUG:
-        print (cli)
-
+    
     stdout = execute_cli(cli)
 
     return str(stdout, ENCODING)
@@ -216,6 +217,9 @@ def button_logic(event, values):
 
 def main():
     ''' Main Function '''
+
+    logging.basicConfig(level=LOGGING_LEVEL, format=LOGGING_FORMAT)
+
     fields = [ "date", "starttime", "stoptime", "taskdesc" ]
 
     #
@@ -227,8 +231,7 @@ def main():
 
     active_timer = get_active_timer()
 
-    if DEBUG:
-        print(tag_len)
+    logging.debug(f"tag_len: {tag_len}")
     #
     # Define the window's contents
     sg.theme(THEME)
@@ -266,9 +269,8 @@ def main():
     #
     ####### Event Loop
     while True:
-
-        if DEBUG:
-            print(table_data)
+        logging.debug(f"****** Start Main Loop ******")
+        logging.debug(f"table_data: {table_data}")
         #
         # Read Button triggers
         event, values = window.read()
@@ -299,8 +301,7 @@ def main():
         # Button Logic
         result, result_display = button_logic(event, values)
 
-        if DEBUG:
-            print(result)
+        logging.debug(f"button_logic result: {result}")
 
         #
         # Update list of tracked time for today
