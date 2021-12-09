@@ -30,16 +30,16 @@ LOGGING_FORMAT = '[%(levelname)s] %(asctime)s - %(funcName)s %(lineno)d - %(mess
 ENCODING = 'utf-8'
 NO_OF_TASKS_TRACKED=0
 
-def execute_cli(cli):
+def execute_cli(cli: str) -> str:
     ''' Execute commands on CLI returns STDOUT '''
 
-    logging.debug(f"cli: {cli}")
+    logging.debug("cli: %s", cli)
 
     process = subprocess.Popen(cli, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
 
-    logging.debug(f"stdout: {stdout}")
-    logging.debug(f"stderr: {stderr}")
+    logging.debug("stdout: %s", stdout)
+    logging.debug("stderr: %s", stderr)
 
     return stdout
 
@@ -51,7 +51,7 @@ def get_active_timer():
 
     output_list = str(stdout, ENCODING).split("\n")
 
-    logging.debug(f"output_list: {output_list}")
+    logging.debug("output_list: %s", output_list)
 
     if output_list[0].strip() == "There is no active time tracking.":
         result = "no active time tracking"
@@ -68,7 +68,7 @@ def get_calendar_entry():
         '-ps', '" - "',
         '-eep', 'url,location,notes,attendees,datetime',
         '-ic', 'Calendar', 'eventsNow', ]
-    
+
     stdout = execute_cli(cli)
 
     return str(stdout, ENCODING)
@@ -100,7 +100,7 @@ def collect_tasks_list(duration='day'):
         table_data.append([task_item['tags'][0] , str(duration)])
 
         if max_tag_len < len(task_item['tags']):
-                max_tag_len = len(task_item['tags'])
+            max_tag_len = len(task_item['tags'])
 
     NO_OF_TASKS_TRACKED = len(table_data)
 
@@ -119,7 +119,7 @@ def validate_date(date_text):
 
     return return_val
 
-def validate_time(time_text):
+def validate_time(time_text: str) -> bool:
     ''' Validate Time is correct format '''
 
     return_val = False
@@ -131,7 +131,7 @@ def validate_time(time_text):
 
     return return_val
 
-def button_logic(event, values):
+def button_logic(event: str, values):
     ''' Execute Button based events executing TimeWarrior CLI commands '''
 
     cli = ['timew']
@@ -185,20 +185,20 @@ def button_logic(event, values):
             taskid = '@1'
             table_no = NO_OF_TASKS_TRACKED-1
 
-        table_data, tag_len = collect_tasks_list()
+        table_data, _ = collect_tasks_list()
         old_description = table_data[table_no][0]
 
         ### Open window
         new_description = sg.popup_get_text('Rename Task', default_text=old_description)
 
-        if (new_description != None):
+        if new_description is not None:
             result = execute_cli(['timew', 'tag', taskid, new_description])
             cli = ['timew', 'untag', taskid, old_description]
             result_display = "Renamed task"
         else:
             result_display= "Rename Canceled"
 
-    elif event == 'Continue' or event == "Delete":
+    elif event in ('Continue', "Delete"):
         command = event.lower()
         cli.append(command)
 
@@ -236,7 +236,7 @@ def main():
 
     active_timer = get_active_timer()
 
-    logging.debug(f"tag_len: {tag_len}")
+    logging.debug("tag_len: %s", tag_len)
     #
     # Define the window's contents
     sg.theme(THEME)
@@ -252,7 +252,7 @@ def main():
             ], title='Date')],
             [ sg.Button('Start', font=GLOBAL_FONT), sg.Button('Stop', font=GLOBAL_FONT), sg.Button('Modify Start', font=GLOBAL_FONT), sg.Button('Curr Running', font=GLOBAL_FONT), ],
             [ sg.Button('Start Meeting', font=GLOBAL_FONT), sg.Button('Track', font=GLOBAL_FONT), sg.Button('Continue', font=GLOBAL_FONT),  sg.Button('Delete', font=GLOBAL_FONT),],
-            [ sg.Button('Rename', font=GLOBAL_FONT) ], 
+            [ sg.Button('Rename', font=GLOBAL_FONT) ],
             [ sg.Text(size=(40,1), key='status_result', font=GLOBAL_FONT) ],
             [ sg.MLine(key="cliout", size=(40,8), font=GLOBAL_FONT) ],
             [ sg.Text("Current Tracking:", font=GLOBAL_FONT), sg.Input(key="curr_tracking", size=(25,1), default_text=active_timer, font=GLOBAL_FONT) ],
@@ -262,7 +262,7 @@ def main():
                     justification='left',
                     num_rows=20,
                     key='timew_table',
-                    tooltip='Todays Data', 
+                    tooltip='Todays Data',
                     font=GLOBAL_FONT)]
         ]
 
@@ -274,14 +274,14 @@ def main():
     #
     ####### Event Loop
     while True:
-        logging.debug(f"****** Start Main Loop ******")
-        logging.debug(f"table_data: {table_data}")
+        logging.debug("****** Start Main Loop ******")
+        logging.debug("table_data: %s", table_data)
         #
         # Read Button triggers
         event, values = window.read()
 
         # Clean up and Close
-        if event == sg.WINDOW_CLOSED or event == 'Quit':
+        if event in (sg.WINDOW_CLOSED, 'Quit'):
             break
 
         #
@@ -298,7 +298,7 @@ def main():
             if validate_time(values['stoptime']):
                 sg.popup('Invalid date please use format "HH:MM" data entered:', values['stoptime'])
                 continue
-        if (event == 'Track' or event == 'Start') and values['taskdesc'] == '':
+        if (event in ('Track', 'Start')) and values['taskdesc'] == '':
             sg.popup('Task Name Can not be Empty')
             continue
 
@@ -306,7 +306,7 @@ def main():
         # Button Logic
         result, result_display = button_logic(event, values)
 
-        logging.debug(f"button_logic result: {result}")
+        logging.debug("button_logic result: %s", result)
 
         #
         # Update list of tracked time for today
