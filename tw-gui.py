@@ -86,8 +86,6 @@ class TwButtonLogic:
         Use icalbuddy to get the start time of the currnet meeting on your calendar right now
         '''
 
-        # /usr/local/bin/icalbuddy -npn -ea -nc -ps "/ » /" -eep \
-        # "url",location,notes,attendees -ic "Calendar" eventsNow
         cli = ['/usr/local/bin/icalbuddy',
             '-npn', '-ea', '-nc', '-b', '',
             '-ps', '" | "',
@@ -227,8 +225,22 @@ class TwButtonLogic:
 
         return cli, result_display
 
+    def button_continue_delete(self, event, values, cli):
+        ''' Run commands for Delete or Continue '''
+
+        command = event.lower()
+        task_no, _ = self.get_tw_taskid_from_timetable(values['timew_table'])
+        cli.extend([command, '@'+str(task_no)])
+        result_display = command + " @" + str(task_no)
+
+        return cli, result_display
+
     def button_logic(self, event: str, values):
-        ''' Execute Button based events executing TimeWarrior CLI commands '''
+        ''' 
+        Execute Button based events executing TimeWarrior CLI commands 
+        Command line is extended based on the button selection and outputs 
+        of the hander functions when used
+        '''
 
         cli = ['timew']
 
@@ -240,26 +252,18 @@ class TwButtonLogic:
             cli, result_display = self.button_track(values, cli)
         elif event == 'Stop':
             cli, result_display = self.button_stop(values, cli)
-
         # Modify start of current / last task
         elif event == "Modify Start":
             cli.extend(['modify', 'start', values['starttime'], '@1'])
             result_display = "Modified Start time to " + values['starttime']
-
         elif event == "Fix Start":
             start_time = self.fixstart()
             cli.extend(['modify', 'start', '@1', start_time])
             result_display = "Modified Start time to " + start_time
-
         elif event == "Rename":
             cli, result_display = self.button_rename(values, cli)
-
         elif event in ('Continue', "Delete"):
-            command = event.lower()
-            task_no, _ = self.get_tw_taskid_from_timetable(values['timew_table'])
-            cli.extend([command, '@'+str(task_no)])
-            result_display = command + " @" + str(task_no)
-
+            cli, result_display = self.button_rename(event, values, cli)
         else:
             result_display = "Default: See Results"
             logging.debug("******* Button not Matched *************")
