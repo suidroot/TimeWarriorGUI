@@ -17,7 +17,7 @@ import logging
 from datetime import datetime
 import PySimpleGUI as sg
 
-# Astetics
+# GUI Astetics
 THEME="Dark Grey 4"
 GLOBAL_FONT='Any 11'
 
@@ -28,104 +28,234 @@ LOGGING_FORMAT = '[%(levelname)s] %(asctime)s - %(funcName)s %(lineno)d - %(mess
 
 # Global Constants
 ENCODING = 'utf-8'
-NO_OF_TASKS_TRACKED=0
 
-def execute_cli(cli: str) -> str:
-    ''' Execute commands on CLI returns STDOUT '''
+class ButtonLogic:
+    ''' This class hold the logic and actions for selected buttons '''
 
-    logging.debug("cli: %s", cli)
+    no_of_tasks_tracked = 0
 
-    process = subprocess.Popen(cli, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, stderr = process.communicate()
+    def __init__(self):
+        ''' initialize the class '''
+        pass
 
-    logging.debug("stdout: %s", stdout)
-    logging.debug("stderr: %s", stderr)
+    @staticmethod
+    def execute_cli(cli: str) -> str:
+        ''' Execute commands on CLI returns STDOUT '''
 
-    return stdout
+        logging.debug("cli: %s", cli)
 
-def get_active_timer() -> str:
-    ''' Get Actively tracked task '''
+        process = subprocess.Popen(cli, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate()
 
-    cli = ['timew']
-    stdout = execute_cli(cli)
+        logging.debug("stdout: %s", stdout)
+        logging.debug("stderr: %s", stderr)
 
-    output_list = str(stdout, ENCODING).split("\n")
+        return stdout
 
-    logging.debug("output_list: %s", output_list)
+    def get_active_timer(self) -> str:
+        ''' Get Actively tracked task '''
 
-    if output_list[0].strip() == "There is no active time tracking.":
-        result = "no active time tracking"
-    else:
-        result = output_list[0][9:].replace('"', '')
+        cli = ['timew']
+        stdout = self.execute_cli(cli)
 
-    return result
+        output_list = str(stdout, ENCODING).split("\n")
 
-def get_calendar_entry() -> str:
-    ''' Use icalbuddy to get the meeting on your calendar right now '''
+        logging.debug("output_list: %s", output_list)
 
-    cli = ['/usr/local/bin/icalbuddy',
-        '-npn', '-ea', '-nc', '-b', '',
-        '-ps', '" - "',
-        '-eep', 'url,location,notes,attendees,datetime',
-        '-ic', 'Calendar', 'eventsNow', ]
-
-    stdout = execute_cli(cli)
-
-    return str(stdout, ENCODING)
-
-def fixstart() -> str:
-    ''' Use icalbuddy to get the start time of the currnet meeting on your calendar right now '''
-
-    # /usr/local/bin/icalbuddy -npn -ea -nc -ps "/ » /" -eep \
-    # "url",location,notes,attendees -ic "Calendar" eventsNow
-    cli = ['/usr/local/bin/icalbuddy',
-        '-npn', '-ea', '-nc', '-b', '',
-        '-ps', '" | "',
-        '-eep', 'url,location,notes,attendees',
-        '-ic', 'Calendar', 'eventsNow', ]
-
-    stdout = execute_cli(cli)
-    logging.debug("stdout: %s", stdout)
-
-    start_time = str(stdout).split("|")[1].split(" - ")[0].strip()
-    #stop_time  = str(stdout).split("|")[1].split(" - ")[1][:-3] - Not used
-    logging.debug("stdout: %s", start_time)
-
-    return start_time
-
-def collect_tasks_list(duration='day'):
-    ''' Collect list of tracked tasks (default to today) '''
-
-    global NO_OF_TASKS_TRACKED
-
-    max_tag_len = 0
-    table_data = []
-
-    cli = ['timew', 'export', ':'+duration]
-    stdout = execute_cli(cli)
-
-    task_list = json.loads(stdout)
-
-    for task_item in task_list:
-        date_format = "%Y%m%dT%H%M%SZ"
-
-        # Calculate Duration (skip or active)
-        if 'end' in task_item.keys():
-            start_date = datetime.strptime(task_item['start'], date_format)
-            end_date = datetime.strptime(task_item['end'], date_format)
-            duration = end_date - start_date
+        if output_list[0].strip() == "There is no active time tracking.":
+            result = "no active time tracking"
         else:
-            duration = "active"
+            result = output_list[0][9:].replace('"', '')
 
-        table_data.append([task_item['tags'][0] , str(duration)])
+        return result
 
-        if max_tag_len < len(task_item['tags']):
-            max_tag_len = len(task_item['tags'])
+    def get_calendar_entry(self) -> str:
+        ''' Use icalbuddy to get the meeting on your calendar right now '''
 
-    NO_OF_TASKS_TRACKED = len(table_data)
+        cli = ['/usr/local/bin/icalbuddy',
+            '-npn', '-ea', '-nc', '-b', '',
+            '-ps', '" - "',
+            '-eep', 'url,location,notes,attendees,datetime',
+            '-ic', 'Calendar', 'eventsNow', ]
 
-    return table_data, max_tag_len
+        stdout = self.execute_cli(cli)
 
+        return str(stdout, ENCODING)
+
+    def fixstart(self) -> str:
+        ''' Use icalbuddy to get the start time of the currnet meeting on your calendar right now '''
+
+        # /usr/local/bin/icalbuddy -npn -ea -nc -ps "/ » /" -eep \
+        # "url",location,notes,attendees -ic "Calendar" eventsNow
+        cli = ['/usr/local/bin/icalbuddy',
+            '-npn', '-ea', '-nc', '-b', '',
+            '-ps', '" | "',
+            '-eep', 'url,location,notes,attendees',
+            '-ic', 'Calendar', 'eventsNow', ]
+
+        stdout = self.execute_cli(cli)
+        logging.debug("stdout: %s", stdout)
+
+        start_time = str(stdout).split("|")[1].split(" - ")[0].strip()
+        #stop_time  = str(stdout).split("|")[1].split(" - ")[1][:-3] - Not used
+        logging.debug("stdout: %s", start_time)
+
+        return start_time
+
+    def collect_tasks_list(self, duration='day'):
+        ''' Collect list of tracked tasks (default to today) '''
+
+        max_tag_len = 0
+        table_data = []
+
+        cli = ['timew', 'export', ':'+duration]
+        stdout = self.execute_cli(cli)
+
+        task_list = json.loads(stdout)
+
+        for task_item in task_list:
+            date_format = "%Y%m%dT%H%M%SZ"
+
+            # Calculate Duration (skip or active)
+            if 'end' in task_item.keys():
+                start_date = datetime.strptime(task_item['start'], date_format)
+                end_date = datetime.strptime(task_item['end'], date_format)
+                duration = end_date - start_date
+            else:
+                duration = "active"
+
+            table_data.append([task_item['tags'][0] , str(duration)])
+
+            if max_tag_len < len(task_item['tags']):
+                max_tag_len = len(task_item['tags'])
+
+        self.no_of_tasks_tracked = len(table_data)
+
+        return table_data, max_tag_len
+
+    def get_tw_taskid_from_timetable(self, timetable):
+        ''' Collect the TimeWarrior taskid and GUI table id '''
+
+        if timetable != []:
+            task_no = self.no_of_tasks_tracked - timetable[0]
+            table_no = timetable[0]
+
+        else:
+            task_no = 1
+            table_no = self.no_of_tasks_tracked-1
+
+        return task_no, table_no
+
+    @staticmethod
+    def button_start(values, cli):
+        ''' Run buttons starting with "Start" '''
+
+        cli.append("start")
+
+        if values['starttime'] != '':
+            cli.append(values['starttime'])
+            result_display = "Started: " + values['taskdesc'] + " at " + values['starttime']
+        else:
+            result_display = "Started: " + values['taskdesc']
+
+        cli.append(values['taskdesc'])
+
+        return cli, result_display
+
+    @staticmethod
+    def button_track(values, cli):
+        ''' Run buttons starting with "Track" '''
+
+        if values['date'] != '':
+            starttime = values['date'] + "T" + values['starttime']
+            stoptime = values['date'] + "T" + values['stoptime']
+        else:
+            starttime = values['starttime']
+            stoptime = values['stoptime']
+
+        cli.extend(['track' , starttime, '-', stoptime, values['taskdesc']])
+
+        result_display = "Tracked: " + values['taskdesc']
+
+        return cli, result_display
+
+    @staticmethod
+    def button_stop(values, cli):
+        ''' Run buttons starting with "Stop" '''
+
+        cli.append("stop")
+
+        if values['stoptime'] != '':
+            cli.append(values['stoptime'])
+        result_display = "Stopped Tracking"
+
+        return cli, result_display
+
+    def button_rename(self, values, cli):
+        ''' Run buttons starting with "Rename" '''
+
+        task_no, table_no = self.get_tw_taskid_from_timetable(values['timew_table'])
+        taskid = '@'+str(task_no)
+
+        table_data, _ = self.collect_tasks_list()
+        old_description = table_data[table_no][0]
+
+        ### Open window
+        new_description = sg.popup_get_text('Rename Task', default_text=old_description)
+
+        if new_description is not None:
+            self.execute_cli(['timew', 'tag', taskid, new_description])
+            cli = ['timew', 'untag', taskid, old_description]
+            result_display = "Renamed task"
+        else:
+            result_display= "Rename Canceled"
+
+        return cli, result_display
+
+    def button_logic(self, event: str, values):
+        ''' Execute Button based events executing TimeWarrior CLI commands '''
+
+        cli = ['timew']
+
+        if event == 'Start Meeting':
+            cli.extend(["start", self.get_calendar_entry()])
+            result_display = "Started meeting"
+
+        elif event in 'Start':
+            cli, result_display = self.button_start(values, cli)
+
+        elif event == 'Track':
+            cli, result_display = self.button_track(values, cli)
+
+        elif event == 'Stop':
+            cli, result_display = self.button_stop(values, cli)
+
+        # Modify start of current / last task
+        elif event == "Modify Start":
+            cli.extend(['modify', 'start', values['starttime'], '@1'])
+            result_display = "Modified Start time to " + values['starttime']
+
+        elif event == "Fix Start":
+            start_time = self.fixstart()
+            cli.extend(['modify', 'start', '@1', start_time])
+            result_display = "Modified Start time to " + start_time
+
+        elif event == "Rename":
+            cli, result_display = self.button_rename(values, cli)
+
+        elif event in ('Continue', "Delete"):
+            command = event.lower()
+            task_no, _ = self.get_tw_taskid_from_timetable(values['timew_table'])
+            cli.extend([command, '@'+str(task_no)])
+            result_display = command + " @" + str(task_no)
+
+        else:
+            result_display = "Default: See Results"
+            logging.debug("******* Button not Matched *************")
+
+        result = self.execute_cli(cli)
+
+        return result, result_display
 
 def validate_date(date_text):
     ''' Validate Date is correct format '''
@@ -151,146 +281,24 @@ def validate_time(time_text: str) -> bool:
 
     return return_val
 
-def get_tw_taskid_from_timetable(timetable):
-    ''' Collect the TimeWarrior taskid and GUI table id '''
-
-    if timetable != []:
-        task_no = NO_OF_TASKS_TRACKED - timetable[0]
-        table_no = timetable[0]
-
-    else:
-        task_no = 1
-        table_no = NO_OF_TASKS_TRACKED-1
-
-    return task_no, table_no
-
-
-def button_start(values, cli):
-    ''' Run buttons starting with "Start" '''
-
-    cli.append("start")
-
-    if values['starttime'] != '':
-        cli.append(values['starttime'])
-        result_display = "Started: " + values['taskdesc'] + " at " + values['starttime']
-    else:
-        result_display = "Started: " + values['taskdesc']
-
-    cli.append(values['taskdesc'])
-
-    return cli, result_display
-
-def button_track(values, cli):
-    ''' Run buttons starting with "Track" '''
-
-    if values['date'] != '':
-        starttime = values['date'] + "T" + values['starttime']
-        stoptime = values['date'] + "T" + values['stoptime']
-    else:
-        starttime = values['starttime']
-        stoptime = values['stoptime']
-
-    cli.extend(['track' , starttime, '-', stoptime, values['taskdesc']])
-
-    result_display = "Tracked: " + values['taskdesc']
-
-    return cli, result_display
-
-def button_stop(values, cli):
-    ''' Run buttons starting with "Stop" '''
-
-    cli.append("stop")
-
-    if values['stoptime'] != '':
-        cli.append(values['stoptime'])
-    result_display = "Stopped Tracking"
-
-    return cli, result_display
-
-def button_rename(values, cli):
-    ''' Run buttons starting with "Rename" '''
-
-    task_no, table_no = get_tw_taskid_from_timetable(values['timew_table'])
-    taskid = '@'+str(task_no)
-
-    table_data, _ = collect_tasks_list()
-    old_description = table_data[table_no][0]
-
-    ### Open window
-    new_description = sg.popup_get_text('Rename Task', default_text=old_description)
-
-    if new_description is not None:
-        execute_cli(['timew', 'tag', taskid, new_description])
-        cli = ['timew', 'untag', taskid, old_description]
-        result_display = "Renamed task"
-    else:
-        result_display= "Rename Canceled"
-
-    return cli, result_display
-
-def button_logic(event: str, values):
-    ''' Execute Button based events executing TimeWarrior CLI commands '''
-
-    cli = ['timew']
-
-    if event == 'Start Meeting':
-        cli.extend(["start", get_calendar_entry()])
-        result_display = "Started meeting"
-
-    elif event in 'Start':
-        cli, result_display = button_start(values, cli)
-
-    elif event == 'Track':
-        cli, result_display = button_track(values, cli)
-
-    elif event == 'Stop':
-        cli, result_display = button_stop(values, cli)
-
-    # Modify start of current / last task
-    elif event == "Modify Start":
-        cli.extend(['modify', 'start', values['starttime'], '@1'])
-        result_display = "Modified Start time to " + values['starttime']
-
-    elif event == "Fix Start":
-        start_time = fixstart()
-        cli.extend(['modify', 'start', '@1', start_time])
-        result_display = "Modified Start time to " + start_time
-
-    elif event == "Rename":
-        cli, result_display = button_rename(values, cli)
-
-    elif event in ('Continue', "Delete"):
-        command = event.lower()
-        task_no, _ = get_tw_taskid_from_timetable(values['timew_table'])
-        cli.extend([command, '@'+str(task_no)])
-        result_display = command + " @" + str(task_no)
-
-    else:
-        result_display = "Default: See Results"
-        logging.debug("******* Button not Matched *************")
-
-    result = execute_cli(cli)
-
-    return result, result_display
-
-
 def main():
     ''' Main Function '''
 
     logging.basicConfig(level=LOGGING_LEVEL, format=LOGGING_FORMAT)
 
     fields = [ "date", "starttime", "stoptime", "taskdesc" ]
+    buttonlogic = ButtonLogic()
 
     #
     # Load inital tracked time data
-    table_data, tag_len = collect_tasks_list()
+    table_data, tag_len = buttonlogic.collect_tasks_list()
     # if empty table set correct column and rows
     if table_data == []:
         table_data = [[" "*25,""]]
 
-    active_timer = get_active_timer()
-
+    active_timer = buttonlogic.get_active_timer()
     logging.debug("tag_len: %s", tag_len)
+
     #
     # Define the window's contents
     sg.theme(THEME)
@@ -355,16 +363,16 @@ def main():
 
         #
         # Button Logic
-        result, result_display = button_logic(event, values)
+        result, result_display = buttonlogic.button_logic(event, values)
 
         logging.debug("button_logic result: %s", result)
 
         #
         # Update list of tracked time for today
-        table_data, tag_len = collect_tasks_list()
+        table_data, tag_len = buttonlogic.collect_tasks_list()
         window['timew_table'].update(values=table_data)
 
-        active_timer = get_active_timer()
+        active_timer = buttonlogic.get_active_timer()
         window['curr_tracking'].update(active_timer)
 
         #
