@@ -18,8 +18,8 @@ from datetime import datetime
 import PySimpleGUI as sg
 
 # GUI Astetics
-THEME="Dark Grey 4"
-GLOBAL_FONT='Any 11'
+THEME = "Dark Grey 4"
+GLOBAL_FONT = "Any 11"
 
 # Enable Debug output
 #LOGGING_LEVEL = logging.ERROR # DEBUG
@@ -213,21 +213,31 @@ class TwButtonLogic:
 
         return cli, result_display
 
+    def button_start_meeting(self, cli):
+        ''' Run Start Meeting from calendar info routine '''
+
+        calendarentry = self.get_calendar_entry()
+        if calendarentry:
+            cli.extend(["start", ])
+            result_display = "Started meeting"
+        else:
+            sg.popup('Nothing available on Calendar')
+            result_display = 'Nothing available on Calendar'
+            cli = None
+
+        return cli, result_display
+
     def button_logic(self, event: str, values):
         ''' Execute Button based events executing TimeWarrior CLI commands '''
 
         cli = ['timew']
 
         if event == 'Start Meeting':
-            cli.extend(["start", self.get_calendar_entry()])
-            result_display = "Started meeting"
-
+            cli, result_display = self.button_start_meeting(cli)
         elif event in 'Start':
             cli, result_display = self.button_start(values, cli)
-
         elif event == 'Track':
             cli, result_display = self.button_track(values, cli)
-
         elif event == 'Stop':
             cli, result_display = self.button_stop(values, cli)
 
@@ -254,7 +264,11 @@ class TwButtonLogic:
             result_display = "Default: See Results"
             logging.debug("******* Button not Matched *************")
 
-        result = self.execute_cli(cli)
+        if cli:
+            result = self.execute_cli(cli)
+        else:
+            # return null bytes for CLI output if cli is not set
+            result = b''
 
         return result, result_display
 
