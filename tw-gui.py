@@ -29,14 +29,13 @@ LOGGING_FORMAT = '[%(levelname)s] %(asctime)s - %(funcName)s %(lineno)d - %(mess
 # Global Constants
 ENCODING = 'utf-8'
 
-class ButtonLogic:
+class TwButtonLogic:
     ''' This class hold the logic and actions for selected buttons '''
 
     no_of_tasks_tracked = 0
 
     def __init__(self):
         ''' initialize the class '''
-        pass
 
     @staticmethod
     def execute_cli(cli: str) -> str:
@@ -83,7 +82,9 @@ class ButtonLogic:
         return str(stdout, ENCODING)
 
     def fixstart(self) -> str:
-        ''' Use icalbuddy to get the start time of the currnet meeting on your calendar right now '''
+        '''
+        Use icalbuddy to get the start time of the currnet meeting on your calendar right now
+        '''
 
         # /usr/local/bin/icalbuddy -npn -ea -nc -ps "/ » /" -eep \
         # "url",location,notes,attendees -ic "Calendar" eventsNow
@@ -285,39 +286,49 @@ def main():
     ''' Main Function '''
 
     logging.basicConfig(level=LOGGING_LEVEL, format=LOGGING_FORMAT)
+    twbuttonlogic = TwButtonLogic()
 
     fields = [ "date", "starttime", "stoptime", "taskdesc" ]
-    buttonlogic = ButtonLogic()
+    timew_summary_columns = ['Tags', 'Duration']
 
     #
     # Load inital tracked time data
-    table_data, tag_len = buttonlogic.collect_tasks_list()
+    table_data, tag_len = twbuttonlogic.collect_tasks_list()
+    logging.debug("tag_len: %s", tag_len)
+
     # if empty table set correct column and rows
     if table_data == []:
         table_data = [[" "*25,""]]
 
-    active_timer = buttonlogic.get_active_timer()
-    logging.debug("tag_len: %s", tag_len)
+    active_timer = twbuttonlogic.get_active_timer()
 
     #
     # Define the window's contents
     sg.theme(THEME)
 
-    timew_summary_columns = ['Tags', 'Duration']
-
     layout = [
-            [ sg.Text("Task:", font=GLOBAL_FONT), sg.Input(key="taskdesc", size=(35,1), font=GLOBAL_FONT) ],
+            [ sg.Text("Task:", font=GLOBAL_FONT), sg.Input(key="taskdesc", size=(35,1), \
+                font=GLOBAL_FONT) ],
             [ sg.Frame(layout=[
-                [ sg.Text("Start Time:", font=GLOBAL_FONT), sg.Input(key="starttime", size=(12,1), font=GLOBAL_FONT), sg.Text("EX: 15:00", font=GLOBAL_FONT) ],
-                [ sg.Text("Stop time:", font=GLOBAL_FONT), sg.Input(key="stoptime", size=(12,1), font=GLOBAL_FONT), sg.Text("EX: 15:00", font=GLOBAL_FONT) ],
-                [ sg.Text("Date: ", font=GLOBAL_FONT), sg.Input(key="date", size=(12,1), font=GLOBAL_FONT), sg.Text("EX: 2020-10-01", font=GLOBAL_FONT) ]
+                [ sg.Text("Start Time:", font=GLOBAL_FONT), sg.Input(key="starttime", \
+                    size=(12,1), font=GLOBAL_FONT), sg.Text("EX: 15:00", \
+                        font=GLOBAL_FONT) ],
+                [ sg.Text("Stop time:", font=GLOBAL_FONT), sg.Input(key="stoptime", \
+                    size=(12,1), font=GLOBAL_FONT), sg.Text("EX: 15:00", font=GLOBAL_FONT) ],
+                [ sg.Text("Date: ", font=GLOBAL_FONT), sg.Input(key="date", size=(12,1), \
+                    font=GLOBAL_FONT), sg.Text("EX: 2020-10-01", font=GLOBAL_FONT) ]
             ], title='Date')],
-            [ sg.Button('Start', font=GLOBAL_FONT), sg.Button('Stop', font=GLOBAL_FONT), sg.Button('Modify Start', font=GLOBAL_FONT), sg.Button('Curr Running', font=GLOBAL_FONT), ],
-            [ sg.Button('Start Meeting', font=GLOBAL_FONT), sg.Button('Track', font=GLOBAL_FONT), sg.Button('Continue', font=GLOBAL_FONT),  sg.Button('Delete', font=GLOBAL_FONT),],
+            [ sg.Button('Start', font=GLOBAL_FONT), sg.Button('Stop', font=GLOBAL_FONT), \
+                sg.Button('Modify Start', font=GLOBAL_FONT), sg.Button('Curr Running', \
+                    font=GLOBAL_FONT), ],
+            [ sg.Button('Start Meeting', font=GLOBAL_FONT), sg.Button('Track', \
+                font=GLOBAL_FONT), sg.Button('Continue', font=GLOBAL_FONT),  \
+                    sg.Button('Delete', font=GLOBAL_FONT),],
             [ sg.Button('Rename', font=GLOBAL_FONT), sg.Button('Fix Start', font=GLOBAL_FONT) ],
             [ sg.Text(size=(40,1), key='status_result', font=GLOBAL_FONT) ],
             [ sg.MLine(key="cliout", size=(40,8), font=GLOBAL_FONT) ],
-            [ sg.Text("Current Tracking:", font=GLOBAL_FONT), sg.Input(key="curr_tracking", size=(25,1), default_text=active_timer, font=GLOBAL_FONT) ],
+            [ sg.Text("Current Tracking:", font=GLOBAL_FONT), sg.Input(key="curr_tracking", \
+                size=(25,1), default_text=active_timer, font=GLOBAL_FONT) ],
             [ sg.Text("Todays Time", font=GLOBAL_FONT) ],
             [ sg.Table(values=table_data, headings=timew_summary_columns, max_col_width=25,
                     display_row_numbers=False,
@@ -347,15 +358,18 @@ def main():
         # Input Validation
         if values['date'] != '':
             if validate_date(values['date']):
-                sg.popup('Invalid date please use format "YYYY-MM-DD" data entered:', values['date'])
+                sg.popup('Invalid date please use format "YYYY-MM-DD" data entered:', \
+                    values['date'])
                 continue
         if values['starttime'] != '':
             if validate_time(values['starttime']):
-                sg.popup('Invalid date please use format "HH:MM" data entered:', values['starttime'])
+                sg.popup('Invalid date please use format "HH:MM" data entered:', \
+                    values['starttime'])
                 continue
         if values['stoptime'] != '':
             if validate_time(values['stoptime']):
-                sg.popup('Invalid date please use format "HH:MM" data entered:', values['stoptime'])
+                sg.popup('Invalid date please use format "HH:MM" data entered:', \
+                    values['stoptime'])
                 continue
         if (event in ('Track', 'Start')) and values['taskdesc'] == '':
             sg.popup('Task Name Can not be Empty')
@@ -363,16 +377,15 @@ def main():
 
         #
         # Button Logic
-        result, result_display = buttonlogic.button_logic(event, values)
-
+        result, result_display = twbuttonlogic.button_logic(event, values)
         logging.debug("button_logic result: %s", result)
 
         #
         # Update list of tracked time for today
-        table_data, tag_len = buttonlogic.collect_tasks_list()
+        table_data, tag_len = twbuttonlogic.collect_tasks_list()
         window['timew_table'].update(values=table_data)
 
-        active_timer = buttonlogic.get_active_timer()
+        active_timer = twbuttonlogic.get_active_timer()
         window['curr_tracking'].update(active_timer)
 
         #
