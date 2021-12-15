@@ -6,7 +6,7 @@
 
 __author__ = "Ben Mason"
 __copyright__ = "Copyright 2021"
-__version__ = "1.0.0"
+__version__ = "1.5.0"
 __email__ = "locutus@the-collective.net"
 __status__ = "Production"
 
@@ -43,7 +43,7 @@ def execute_cli(cli: str) -> str:
 
     return stdout
 
-def get_active_timer():
+def get_active_timer() -> str:
     ''' Get Actively tracked task '''
 
     cli = ['timew']
@@ -60,7 +60,7 @@ def get_active_timer():
 
     return result
 
-def get_calendar_entry():
+def get_calendar_entry() -> str:
     ''' Use icalbuddy to get the meeting on your calendar right now '''
 
     cli = ['/usr/local/bin/icalbuddy',
@@ -72,6 +72,26 @@ def get_calendar_entry():
     stdout = execute_cli(cli)
 
     return str(stdout, ENCODING)
+
+def fixstart() -> str:
+    ''' Use icalbuddy to get the start time of the currnet meeting on your calendar right now '''
+
+    # /usr/local/bin/icalbuddy -npn -ea -nc -ps "/ » /" -eep \
+    # "url",location,notes,attendees -ic "Calendar" eventsNow
+    cli = ['/usr/local/bin/icalbuddy',
+        '-npn', '-ea', '-nc', '-b', '',
+        '-ps', '" | "',
+        '-eep', 'url,location,notes,attendees',
+        '-ic', 'Calendar', 'eventsNow', ]
+
+    stdout = execute_cli(cli)
+    logging.debug("stdout: %s", stdout)
+
+    start_time = str(stdout).split("|")[1].split(" - ")[0].strip()
+    #stop_time  = str(stdout).split("|")[1].split(" - ")[1][:-3] - Not used
+    logging.debug("stdout: %s", start_time)
+
+    return start_time
 
 def collect_tasks_list(duration='day'):
     ''' Collect list of tracked tasks (default to today) '''
@@ -131,6 +151,83 @@ def validate_time(time_text: str) -> bool:
 
     return return_val
 
+def get_tw_taskid_from_timetable(timetable):
+    ''' Collect the TimeWarrior taskid and GUI table id '''
+
+    if timetable != []:
+        task_no = NO_OF_TASKS_TRACKED - timetable[0]
+        table_no = timetable[0]
+
+    else:
+        task_no = 1
+        table_no = NO_OF_TASKS_TRACKED-1
+
+    return task_no, table_no
+
+
+def button_start(values, cli):
+    ''' Run buttons starting with "Start" '''
+
+    cli.append("start")
+
+    if values['starttime'] != '':
+        cli.append(values['starttime'])
+        result_display = "Started: " + values['taskdesc'] + " at " + values['starttime']
+    else:
+        result_display = "Started: " + values['taskdesc']
+
+    cli.append(values['taskdesc'])
+
+    return cli, result_display
+
+def button_track(values, cli):
+    ''' Run buttons starting with "Track" '''
+
+    if values['date'] != '':
+        starttime = values['date'] + "T" + values['starttime']
+        stoptime = values['date'] + "T" + values['stoptime']
+    else:
+        starttime = values['starttime']
+        stoptime = values['stoptime']
+
+    cli.extend(['track' , starttime, '-', stoptime, values['taskdesc']])
+
+    result_display = "Tracked: " + values['taskdesc']
+
+    return cli, result_display
+
+def button_stop(values, cli):
+    ''' Run buttons starting with "Stop" '''
+
+    cli.append("stop")
+
+    if values['stoptime'] != '':
+        cli.append(values['stoptime'])
+    result_display = "Stopped Tracking"
+
+    return cli, result_display
+
+def button_rename(values, cli):
+    ''' Run buttons starting with "Rename" '''
+
+    task_no, table_no = get_tw_taskid_from_timetable(values['timew_table'])
+    taskid = '@'+str(task_no)
+
+    table_data, _ = collect_tasks_list()
+    old_description = table_data[table_no][0]
+
+    ### Open window
+    new_description = sg.popup_get_text('Rename Task', default_text=old_description)
+
+    if new_description is not None:
+        execute_cli(['timew', 'tag', taskid, new_description])
+        cli = ['timew', 'untag', taskid, old_description]
+        result_display = "Renamed task"
+    else:
+        result_display= "Rename Canceled"
+
+    return cli, result_display
+
 def button_logic(event: str, values):
     ''' Execute Button based events executing TimeWarrior CLI commands '''
 
@@ -141,79 +238,36 @@ def button_logic(event: str, values):
         result_display = "Started meeting"
 
     elif event in 'Start':
-        cli.append("start")
-
-        if values['starttime'] != '':
-            cli.append(values['starttime'])
-            result_display = "Started: " + values['taskdesc'] + " at " + values['starttime']
-        else:
-            result_display = "Started: " + values['taskdesc']
-
-        cli.append(values['taskdesc'])
+        cli, result_display = button_start(values, cli)
 
     elif event == 'Track':
-
-        if values['date'] != '':
-            starttime = values['date'] + "T" + values['starttime']
-            stoptime = values['date'] + "T" + values['stoptime']
-        else:
-            starttime = values['starttime']
-            stoptime = values['stoptime']
-
-        cli.extend(['track' , starttime, '-', stoptime, values['taskdesc']])
-
-        result_display = "Tracked: " + values['taskdesc']
+        cli, result_display = button_track(values, cli)
 
     elif event == 'Stop':
-        cli.append("stop")
-
-        if values['stoptime'] != '':
-            cli.append(values['stoptime'])
-        result_display = "Stopped Tracking"
+        cli, result_display = button_stop(values, cli)
 
     # Modify start of current / last task
     elif event == "Modify Start":
         cli.extend(['modify', 'start', values['starttime'], '@1'])
         result_display = "Modified Start time to " + values['starttime']
 
+    elif event == "Fix Start":
+        start_time = fixstart()
+        cli.extend(['modify', 'start', '@1', start_time])
+        result_display = "Modified Start time to " + start_time
+
     elif event == "Rename":
-        if values['timew_table'] != []:
-            table_no = values['timew_table'][0]
-            task_no = NO_OF_TASKS_TRACKED - table_no
-            taskid = '@'+str(task_no)
-        else:
-            taskid = '@1'
-            table_no = NO_OF_TASKS_TRACKED-1
-
-        table_data, _ = collect_tasks_list()
-        old_description = table_data[table_no][0]
-
-        ### Open window
-        new_description = sg.popup_get_text('Rename Task', default_text=old_description)
-
-        if new_description is not None:
-            result = execute_cli(['timew', 'tag', taskid, new_description])
-            cli = ['timew', 'untag', taskid, old_description]
-            result_display = "Renamed task"
-        else:
-            result_display= "Rename Canceled"
+        cli, result_display = button_rename(values, cli)
 
     elif event in ('Continue', "Delete"):
         command = event.lower()
-        cli.append(command)
-
-        if values['timew_table'] != []:
-            task_no = NO_OF_TASKS_TRACKED - values['timew_table'][0]
-            cli.append('@'+str(task_no))
-
-            result_display = command + " @" + str(task_no)
-        else:
-            cli.append('@1')
-
-            result_display = command + " last task"
+        task_no, _ = get_tw_taskid_from_timetable(values['timew_table'])
+        cli.extend([command, '@'+str(task_no)])
+        result_display = command + " @" + str(task_no)
 
     else:
         result_display = "Default: See Results"
+        logging.debug("******* Button not Matched *************")
 
     result = execute_cli(cli)
 
@@ -252,7 +306,7 @@ def main():
             ], title='Date')],
             [ sg.Button('Start', font=GLOBAL_FONT), sg.Button('Stop', font=GLOBAL_FONT), sg.Button('Modify Start', font=GLOBAL_FONT), sg.Button('Curr Running', font=GLOBAL_FONT), ],
             [ sg.Button('Start Meeting', font=GLOBAL_FONT), sg.Button('Track', font=GLOBAL_FONT), sg.Button('Continue', font=GLOBAL_FONT),  sg.Button('Delete', font=GLOBAL_FONT),],
-            [ sg.Button('Rename', font=GLOBAL_FONT) ],
+            [ sg.Button('Rename', font=GLOBAL_FONT), sg.Button('Fix Start', font=GLOBAL_FONT) ],
             [ sg.Text(size=(40,1), key='status_result', font=GLOBAL_FONT) ],
             [ sg.MLine(key="cliout", size=(40,8), font=GLOBAL_FONT) ],
             [ sg.Text("Current Tracking:", font=GLOBAL_FONT), sg.Input(key="curr_tracking", size=(25,1), default_text=active_timer, font=GLOBAL_FONT) ],
@@ -267,9 +321,6 @@ def main():
         ]
 
     window = sg.Window('Timewarrior Tracking', layout)
-
-    # font = "Helvetica "  + str(fontSize)
-    # window['text'].update(font=font)
 
     #
     ####### Event Loop
