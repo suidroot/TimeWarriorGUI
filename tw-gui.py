@@ -20,6 +20,7 @@ import PySimpleGUI as sg
 # GUI Astetics
 THEME = "Dark Grey 4"
 GLOBAL_FONT = "Any 11"
+CLI_BASE_COMMAND = 'timew'
 
 # Enable Debug output
 #LOGGING_LEVEL = logging.ERROR # DEBUG
@@ -54,7 +55,7 @@ class TwButtonLogic:
     def get_active_timer(self) -> str:
         ''' Get Actively tracked task '''
 
-        cli = ['timew']
+        cli = [CLI_BASE_COMMAND]
         stdout = self.execute_cli(cli)
 
         output_list = str(stdout, ENCODING).split("\n")
@@ -107,7 +108,7 @@ class TwButtonLogic:
         max_tag_len = 0
         table_data = []
 
-        cli = ['timew', 'export', ':'+duration]
+        cli = [CLI_BASE_COMMAND, 'export', ':'+duration]
         stdout = self.execute_cli(cli)
 
         task_list = json.loads(stdout)
@@ -132,7 +133,7 @@ class TwButtonLogic:
 
         return table_data, max_tag_len
 
-    def get_tw_taskid_from_timetable(self, timetable):
+    def get_tw_taskid_from_timetable(self, timetable) -> tuple[int,int]:
         ''' Collect the TimeWarrior taskid and GUI table id '''
 
         if timetable != []:
@@ -146,7 +147,7 @@ class TwButtonLogic:
         return task_no, table_no
 
     @staticmethod
-    def button_start(values, cli):
+    def button_start(values, cli) -> tuple[str, str]:
         ''' Run buttons starting with "Start" '''
 
         cli.append("start")
@@ -162,7 +163,7 @@ class TwButtonLogic:
         return cli, result_display
 
     @staticmethod
-    def button_track(values, cli):
+    def button_track(values, cli) -> tuple[str, str]:
         ''' Run buttons starting with "Track" '''
 
         if values['date'] != '':
@@ -179,7 +180,7 @@ class TwButtonLogic:
         return cli, result_display
 
     @staticmethod
-    def button_stop(values, cli):
+    def button_stop(values, cli) -> tuple[str, str]:
         ''' Run buttons starting with "Stop" '''
 
         cli.append("stop")
@@ -190,7 +191,7 @@ class TwButtonLogic:
 
         return cli, result_display
 
-    def button_rename(self, values, cli):
+    def button_rename(self, values, cli: str) -> tuple[str, str]:
         ''' Run buttons starting with "Rename" '''
 
         task_no, table_no = self.get_tw_taskid_from_timetable(values['timew_table'])
@@ -203,15 +204,15 @@ class TwButtonLogic:
         new_description = sg.popup_get_text('Rename Task', default_text=old_description)
 
         if new_description is not None:
-            self.execute_cli(['timew', 'tag', taskid, new_description])
-            cli = ['timew', 'untag', taskid, old_description]
+            self.execute_cli([CLI_BASE_COMMAND, 'tag', taskid, new_description])
+            cli = [CLI_BASE_COMMAND, 'untag', taskid, old_description]
             result_display = "Renamed task"
         else:
             result_display= "Rename Canceled"
 
         return cli, result_display
 
-    def button_start_meeting(self, cli):
+    def button_start_meeting(self, cli: str) -> tuple[str, str]:
         ''' Run Start Meeting from calendar info routine '''
 
         calendarentry = self.get_calendar_entry()
@@ -225,7 +226,7 @@ class TwButtonLogic:
 
         return cli, result_display
 
-    def button_continue_delete(self, event, values, cli):
+    def button_continue_delete(self, event, values, cli: str) -> tuple[str, str]:
         ''' Run commands for Delete or Continue '''
 
         command = event.lower()
@@ -235,14 +236,14 @@ class TwButtonLogic:
 
         return cli, result_display
 
-    def button_logic(self, event: str, values):
+    def button_logic(self, event: str, values) -> tuple[bytes, str]:
         ''' 
         Execute Button based events executing TimeWarrior CLI commands 
         Command line is extended based on the button selection and outputs 
         of the hander functions when used
         '''
 
-        cli = ['timew']
+        cli = [CLI_BASE_COMMAND]
 
         if event == 'Start Meeting':
             cli, result_display = self.button_start_meeting(cli)
@@ -276,7 +277,7 @@ class TwButtonLogic:
 
         return result, result_display
 
-def validate_date(date_text):
+def validate_date(date_text: str) -> bool:
     ''' Validate Date is correct format '''
 
     return_val = False
