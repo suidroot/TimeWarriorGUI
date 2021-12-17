@@ -24,7 +24,7 @@ CLI_BASE_COMMAND = 'timew'
 
 # Enable Debug output
 #LOGGING_LEVEL = logging.ERROR # DEBUG
-LOGGING_LEVEL = logging.DEBUG
+LOGGING_LEVEL = logging.ERROR
 LOGGING_FORMAT = '[%(levelname)s] %(asctime)s - %(funcName)s %(lineno)d - %(message)s'
 
 # Global Constants
@@ -124,10 +124,14 @@ class TwButtonLogic:
             else:
                 duration = "active"
 
-            table_data.append([task_item['tags'][0] , str(duration)])
+            task_name = task_item.get('tags', [''])
+            table_data.append([task_name[0] , str(duration)])
 
-            if max_tag_len < len(task_item['tags']):
-                max_tag_len = len(task_item['tags'])
+            #table_data.append([task_item['tags'][0] , str(duration)])
+
+
+            if max_tag_len < len(task_name):
+                max_tag_len = len(task_name)
 
         self.no_of_tasks_tracked = len(table_data)
 
@@ -217,7 +221,7 @@ class TwButtonLogic:
 
         calendarentry = self.get_calendar_entry()
         if calendarentry:
-            cli.extend(["start", ])
+            cli.extend(["start", calendarentry])
             result_display = "Started meeting"
         else:
             sg.popup('Nothing available on Calendar')
@@ -264,10 +268,12 @@ class TwButtonLogic:
         elif event == "Rename":
             cli, result_display = self.button_rename(values, cli)
         elif event in ('Continue', "Delete"):
-            cli, result_display = self.button_rename(event, values, cli)
-        else:
+            cli, result_display = self.button_continue_delete(event, values, cli)
+        elif event == "Curr Running":
             result_display = "Default: See Results"
-            logging.debug("******* Button not Matched *************")
+        else:
+            result_display = "Button not Matched"
+            logging.error("******* Button not Matched '%s' *************", event)
 
         if cli:
             result = self.execute_cli(cli)
