@@ -240,6 +240,24 @@ class TwButtonLogic:
 
         return cli, result_display
 
+    def button_modify(self, values, cli: str) -> tuple[str, str]:
+
+        task_no, table_no = self.get_tw_taskid_from_timetable(values['timew_table'])
+        taskid = '@'+str(task_no)
+
+        if values['starttime'] != "":
+            modify_time = values['starttime']
+            modify_mode = "start"
+        elif values['stoptime'] != "":
+            modify_time = values['stoptime']
+            modify_mode = "end"
+
+        cli.extend(['modify', modify_mode, taskid, modify_time])
+        result_display = "Modified " + modify_mode + " time to " + modify_time
+
+        return cli, result_display
+
+
     def button_logic(self, event: str, values) -> tuple[bytes, str]:
         ''' 
         Execute Button based events executing TimeWarrior CLI commands 
@@ -258,9 +276,8 @@ class TwButtonLogic:
         elif event == 'Stop':
             cli, result_display = self.button_stop(values, cli)
         # Modify start of current / last task
-        elif event == "Modify Start":
-            cli.extend(['modify', 'start', values['starttime'], '@1'])
-            result_display = "Modified Start time to " + values['starttime']
+        elif event == "Modify":
+            cli, result_display = self.button_modify(values, cli)
         elif event == "Fix Start":
             start_time = self.fixstart()
             cli.extend(['modify', 'start', '@1', start_time])
@@ -343,13 +360,14 @@ def main():
                 [ sg.Text("Date: ", font=GLOBAL_FONT), sg.Input(key="date", size=(12,1), \
                     font=GLOBAL_FONT), sg.Text("EX: 2020-10-01", font=GLOBAL_FONT) ]
             ], title='Date')],
+            # Buttons
             [ sg.Button('Start', font=GLOBAL_FONT), sg.Button('Stop', font=GLOBAL_FONT), \
-                sg.Button('Modify Start', font=GLOBAL_FONT), sg.Button('Curr Running', \
-                    font=GLOBAL_FONT), ],
+                sg.Button('Modify', font=GLOBAL_FONT), sg.Button('Fix Start', font=GLOBAL_FONT) ],
             [ sg.Button('Start Meeting', font=GLOBAL_FONT), sg.Button('Track', \
                 font=GLOBAL_FONT), sg.Button('Continue', font=GLOBAL_FONT),  \
                     sg.Button('Delete', font=GLOBAL_FONT),],
-            [ sg.Button('Rename', font=GLOBAL_FONT), sg.Button('Fix Start', font=GLOBAL_FONT) ],
+            [ sg.Button('Rename', font=GLOBAL_FONT), sg.Button('Curr Running', font=GLOBAL_FONT), ],
+            # Text Boxes
             [ sg.Text(size=(40,1), key='status_result', font=GLOBAL_FONT) ],
             [ sg.MLine(key="cliout", size=(40,8), font=GLOBAL_FONT) ],
             [ sg.Text("Current Tracking:", font=GLOBAL_FONT), sg.Input(key="curr_tracking", \
