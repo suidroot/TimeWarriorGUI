@@ -34,6 +34,7 @@ class TwButtonLogic:
     ''' This class hold the logic and actions for selected buttons '''
 
     no_of_tasks_tracked = 0
+    todays_tasks = None
 
     def __init__(self):
         ''' initialize the class '''
@@ -103,10 +104,16 @@ class TwButtonLogic:
         return start_time
 
     def collect_tasks_list(self, duration='day'):
-        ''' Collect list of tracked tasks (default to today) '''
+        ''' 
+        Collect list of tracked tasks (default to today) 
+        Store in object variable
 
-        max_tag_len = 0
-        table_data = []
+        return number of tasks
+        '''
+
+        table_dict = []
+        date_format = "%Y%m%dT%H%M%SZ"
+
 
         cli = [CLI_BASE_COMMAND, 'export', ':'+duration]
         stdout = self.execute_cli(cli)
@@ -114,28 +121,63 @@ class TwButtonLogic:
         task_list = json.loads(stdout)
 
         for task_item in task_list:
-            date_format = "%Y%m%dT%H%M%SZ"
+            task = {}
+
+            task['starttime'] = datetime.strptime(task_item['start'], date_format)
 
             # Calculate Duration (skip or active)
             if 'end' in task_item.keys():
-                start_date = datetime.strptime(task_item['start'], date_format)
-                end_date = datetime.strptime(task_item['end'], date_format)
-                duration = end_date - start_date
+           
+                task['stoptime'] = datetime.strptime(task_item['end'], date_format)
+                task['duration'] = task['stoptime'] - task['starttime']
             else:
-                duration = "active"
+                task['duration'] = 'Active'
 
-            task_name = task_item.get('tags', [''])
-            table_data.append([task_name[0] , str(duration)])
+            task['id'] = task_item['id']
+            task['tag'] = task_item.get('tags', [''])
 
-            #table_data.append([task_item['tags'][0] , str(duration)])
+            table_dict.append(task)
 
+        self.todays_tasks = table_dict
+        self.no_of_tasks_tracked = len(table_dict)
 
-            if max_tag_len < len(task_name):
-                max_tag_len = len(task_name)
+        return len(table_dict)
 
-        self.no_of_tasks_tracked = len(table_data)
+    def return_task_table(self):
+        ''' Return basic list of tasks used to generate list in UI '''
 
-        return table_data, max_tag_len
+        table_data = []
+        max_tag_len = 0
+
+        self.collect_tasks_list()
+
+        for task_item in self.todays_tasks:
+            table_data.append([task_item['tag'][0] , str(task_item['duration'])])
+
+            if max_tag_len < len(task_item['tag']):
+                max_tag_len = len(task_item['tag'])
+
+        logging.debug("table_data: %s", table_data)
+
+        return table_data, max_tag_len 
+
+    def return_task_details(self, values):
+        ''' Return details of a specific task '''
+
+        task_no, _ = self.get_tw_taskid_from_timetable(values['timew_table'])
+        task = None
+
+        logging.debug("task_no: %s", task_no)
+
+        for task_item in self.todays_tasks:
+            logging.debug("task_item: %s", task_item)
+
+            if (task_item['id'] == task_no):
+                task = task_item
+                logging.debug("task: found %s", task)
+                break
+
+        return task
 
     def get_tw_taskid_from_timetable(self, timetable) -> tuple[int,int]:
         ''' Collect the TimeWarrior taskid and GUI table id '''
@@ -147,6 +189,8 @@ class TwButtonLogic:
         else:
             task_no = 1
             table_no = self.no_of_tasks_tracked-1
+
+        logging.debug("task_no: %s %s ", task_no, table_no)
 
         return task_no, table_no
 
@@ -198,11 +242,9 @@ class TwButtonLogic:
     def button_rename(self, values, cli: str) -> tuple[str, str]:
         ''' Run buttons starting with "Rename" '''
 
-        task_no, table_no = self.get_tw_taskid_from_timetable(values['timew_table'])
-        taskid = '@'+str(task_no)
-
-        table_data, _ = self.collect_tasks_list()
-        old_description = table_data[table_no][0]
+        task = self.return_task_details(values)
+        old_description = task['tag'][0]
+        taskid = '@' + str(task['id'])
 
         ### Open window
         new_description = sg.popup_get_text('Rename Task', default_text=old_description)
@@ -241,8 +283,9 @@ class TwButtonLogic:
         return cli, result_display
 
     def button_modify(self, values, cli: str) -> tuple[str, str]:
+        ''' Modify start or stop time of a task '''
 
-        task_no, table_no = self.get_tw_taskid_from_timetable(values['timew_table'])
+        task_no, _ = self.get_tw_taskid_from_timetable(values['timew_table'])
         taskid = '@'+str(task_no)
 
         if values['starttime'] != "":
@@ -257,6 +300,20 @@ class TwButtonLogic:
 
         return cli, result_display
 
+    def button_details(self, values):
+        ''' Collect details of a specific task '''
+        
+        task = self.return_task_details(values)
+
+        text = str(task['tag'][0]) + "\n" 
+        text += "Start Time: " + str(task['starttime']) + "\n" 
+
+        if 'stoptime' in task.keys():
+            text += "Stop Time: " + str(task['stoptime']) + "\n"
+
+        result_display = ''
+
+        return text, result_display
 
     def button_logic(self, event: str, values) -> tuple[bytes, str]:
         ''' 
@@ -288,6 +345,9 @@ class TwButtonLogic:
             cli, result_display = self.button_continue_delete(event, values, cli)
         elif event == "Curr Running":
             result_display = "Default: See Results"
+        elif event == "Details":
+            ouput, result_display = self.button_details(values)
+            sg.popup(ouput)
         else:
             result_display = "Button not Matched"
             logging.error("******* Button not Matched '%s' *************", event)
@@ -335,7 +395,9 @@ def main():
 
     #
     # Load inital tracked time data
-    table_data, tag_len = twbuttonlogic.collect_tasks_list()
+    twbuttonlogic.collect_tasks_list()
+
+    table_data, tag_len = twbuttonlogic.return_task_table()
     logging.debug("tag_len: %s", tag_len)
 
     # if empty table set correct column and rows
@@ -366,7 +428,7 @@ def main():
             [ sg.Button('Start Meeting', font=GLOBAL_FONT), sg.Button('Track', \
                 font=GLOBAL_FONT), sg.Button('Continue', font=GLOBAL_FONT),  \
                     sg.Button('Delete', font=GLOBAL_FONT),],
-            [ sg.Button('Rename', font=GLOBAL_FONT), sg.Button('Curr Running', font=GLOBAL_FONT), ],
+            [ sg.Button('Rename', font=GLOBAL_FONT), sg.Button('Curr Running', font=GLOBAL_FONT), sg.Button('Details', font=GLOBAL_FONT)],
             # Text Boxes
             [ sg.Text(size=(40,1), key='status_result', font=GLOBAL_FONT) ],
             [ sg.MLine(key="cliout", size=(40,8), font=GLOBAL_FONT) ],
@@ -425,7 +487,7 @@ def main():
 
         #
         # Update list of tracked time for today
-        table_data, tag_len = twbuttonlogic.collect_tasks_list()
+        table_data, tag_len = twbuttonlogic.return_task_table()
         window['timew_table'].update(values=table_data)
 
         active_timer = twbuttonlogic.get_active_timer()
