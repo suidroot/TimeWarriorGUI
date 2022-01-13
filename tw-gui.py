@@ -21,6 +21,8 @@ import PySimpleGUI as sg
 THEME = "Dark Grey 4"
 GLOBAL_FONT = "Any 11"
 CLI_BASE_COMMAND = 'timew'
+ICALBUDDY_LOCATION = '/usr/local/bin/icalbuddy'
+ICALBUDDY_ENABLE = True
 
 # Enable Debug output
 #LOGGING_LEVEL = logging.ERROR # DEBUG
@@ -57,10 +59,9 @@ class TwButtonLogic:
         ''' Get Actively tracked task '''
 
         cli = [CLI_BASE_COMMAND]
+
         stdout = self.execute_cli(cli)
-
         output_list = str(stdout, ENCODING).split("\n")
-
         logging.debug("output_list: %s", output_list)
 
         if output_list[0].strip() == "There is no active time tracking.":
@@ -73,7 +74,7 @@ class TwButtonLogic:
     def get_calendar_entry(self) -> str:
         ''' Use icalbuddy to get the meeting on your calendar right now '''
 
-        cli = ['/usr/local/bin/icalbuddy',
+        cli = [ICALBUDDY_LOCATION,
             '-npn', '-ea', '-nc', '-b', '',
             '-ps', '" - "',
             '-eep', 'url,location,notes,attendees,datetime',
@@ -83,12 +84,12 @@ class TwButtonLogic:
 
         return str(stdout, ENCODING)
 
-    def fixstart(self) -> str:
+    def get_current_calendar_starttime(self) -> str:
         '''
         Use icalbuddy to get the start time of the currnet meeting on your calendar right now
         '''
 
-        cli = ['/usr/local/bin/icalbuddy',
+        cli = [ICALBUDDY_LOCATION,
             '-npn', '-ea', '-nc', '-b', '',
             '-ps', '" | "',
             '-eep', 'url,location,notes,attendees',
@@ -302,8 +303,19 @@ class TwButtonLogic:
 
     def button_details(self, values):
         ''' Collect details of a specific task '''
-        
         task = self.return_task_details(values)
+
+        layout = [
+                        [ sg.Text('Task Tag', size=(8, 1)), sg.InputText( str(task['tag'][0]) ) ],
+                        [ sg.Text('Start Time', size=(8, 1)), sg.InputText(task['starttime'].strftime("%H:%M:%S")) ],
+                        [ sg.Text('Duration', size=(8, 1)), sg.InputText(task['duration']) ],
+                        [ sg.Button('Close', font=GLOBAL_FONT) ]
+                    ]
+        
+        if 'stoptime' in task.keys():
+            layout.insert(2, [ sg.Text('Stop Time'), sg.InputText(task['stoptime'].strftime("%H:%M:%S")) ])
+
+        _, _ = sg.Window('Task Details', layout).read(close=True)
 
         text = str(task['tag'][0]) + "\n" 
         text += "Start Time: " + str(task['starttime']) + "\n" 
@@ -336,18 +348,17 @@ class TwButtonLogic:
         elif event == "Modify":
             cli, result_display = self.button_modify(values, cli)
         elif event == "Fix Start":
-            start_time = self.fixstart()
+            start_time = self.get_current_calendar_starttime()
             cli.extend(['modify', 'start', '@1', start_time])
             result_display = "Modified Start time to " + start_time
         elif event == "Rename":
             cli, result_display = self.button_rename(values, cli)
         elif event in ('Continue', "Delete"):
             cli, result_display = self.button_continue_delete(event, values, cli)
-        elif event == "Curr Running":
+        elif event == "Refresh":
             result_display = "Default: See Results"
         elif event == "Details":
             ouput, result_display = self.button_details(values)
-            sg.popup(ouput)
         else:
             result_display = "Button not Matched"
             logging.error("******* Button not Matched '%s' *************", event)
@@ -405,7 +416,7 @@ def main():
         table_data = [[" "*25,""]]
 
     active_timer = twbuttonlogic.get_active_timer()
-
+    
     #
     # Define the window's contents
     sg.theme(THEME)
@@ -414,21 +425,18 @@ def main():
             [ sg.Text("Task:", font=GLOBAL_FONT), sg.Input(key="taskdesc", size=(35,1), \
                 font=GLOBAL_FONT) ],
             [ sg.Frame(layout=[
-                [ sg.Text("Start Time:", font=GLOBAL_FONT), sg.Input(key="starttime", \
+                [ sg.Text("Start Time:", size=(8, 1), font=GLOBAL_FONT), sg.Input(key="starttime", \
                     size=(12,1), font=GLOBAL_FONT), sg.Text("EX: 15:00", \
                         font=GLOBAL_FONT) ],
-                [ sg.Text("Stop time:", font=GLOBAL_FONT), sg.Input(key="stoptime", \
+                [ sg.Text("Stop time:", size=(8, 1), font=GLOBAL_FONT), sg.Input(key="stoptime", \
                     size=(12,1), font=GLOBAL_FONT), sg.Text("EX: 15:00", font=GLOBAL_FONT) ],
-                [ sg.Text("Date: ", font=GLOBAL_FONT), sg.Input(key="date", size=(12,1), \
+                [ sg.Text("Date:", size=(8, 1), font=GLOBAL_FONT), sg.Input(key="date", size=(12,1), \
                     font=GLOBAL_FONT), sg.Text("EX: 2020-10-01", font=GLOBAL_FONT) ]
             ], title='Date')],
             # Buttons
             [ sg.Button('Start', font=GLOBAL_FONT), sg.Button('Stop', font=GLOBAL_FONT), \
-                sg.Button('Modify', font=GLOBAL_FONT), sg.Button('Fix Start', font=GLOBAL_FONT) ],
-            [ sg.Button('Start Meeting', font=GLOBAL_FONT), sg.Button('Track', \
-                font=GLOBAL_FONT), sg.Button('Continue', font=GLOBAL_FONT),  \
-                    sg.Button('Delete', font=GLOBAL_FONT),],
-            [ sg.Button('Rename', font=GLOBAL_FONT), sg.Button('Curr Running', font=GLOBAL_FONT), sg.Button('Details', font=GLOBAL_FONT)],
+                sg.Button('Modify', font=GLOBAL_FONT), sg.Button('Track', font=GLOBAL_FONT), sg.Button('Rename', font=GLOBAL_FONT)],
+            [ sg.Button('Continue', font=GLOBAL_FONT), sg.Button('Delete', font=GLOBAL_FONT), sg.Button('Details', font=GLOBAL_FONT), sg.Button('Refresh', font=GLOBAL_FONT)],
             # Text Boxes
             [ sg.Text(size=(40,1), key='status_result', font=GLOBAL_FONT) ],
             [ sg.MLine(key="cliout", size=(40,8), font=GLOBAL_FONT) ],
@@ -443,6 +451,10 @@ def main():
                     tooltip='Todays Data',
                     font=GLOBAL_FONT)]
         ]
+
+    if ICALBUDDY_ENABLE:
+        calendar_buttons = [ sg.Button('Start Meeting', font=GLOBAL_FONT), sg.Button('Fix Start', font=GLOBAL_FONT) ]
+        layout.insert(4, calendar_buttons)
 
     window = sg.Window('Timewarrior Tracking', layout)
 
