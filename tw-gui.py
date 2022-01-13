@@ -105,8 +105,8 @@ class TwButtonLogic:
         return start_time
 
     def collect_tasks_list(self, duration='day'):
-        ''' 
-        Collect list of tracked tasks (default to today) 
+        '''
+        Collect list of tracked tasks (default to today)
         Store in object variable
 
         return number of tasks
@@ -128,7 +128,6 @@ class TwButtonLogic:
 
             # Calculate Duration (skip or active)
             if 'end' in task_item.keys():
-           
                 task['stoptime'] = datetime.strptime(task_item['end'], date_format)
                 task['duration'] = task['stoptime'] - task['starttime']
             else:
@@ -160,7 +159,7 @@ class TwButtonLogic:
 
         logging.debug("table_data: %s", table_data)
 
-        return table_data, max_tag_len 
+        return table_data, max_tag_len
 
     def return_task_details(self, values):
         ''' Return details of a specific task '''
@@ -173,7 +172,7 @@ class TwButtonLogic:
         for task_item in self.todays_tasks:
             logging.debug("task_item: %s", task_item)
 
-            if (task_item['id'] == task_no):
+            if task_item['id'] == task_no:
                 task = task_item
                 logging.debug("task: found %s", task)
                 break
@@ -307,18 +306,20 @@ class TwButtonLogic:
 
         layout = [
                         [ sg.Text('Task Tag', size=(8, 1)), sg.InputText( str(task['tag'][0]) ) ],
-                        [ sg.Text('Start Time', size=(8, 1)), sg.InputText(task['starttime'].strftime("%H:%M:%S")) ],
+                        [ sg.Text('Start Time', size=(8, 1)), \
+                            sg.InputText(task['starttime'].strftime("%H:%M:%S")) ],
                         [ sg.Text('Duration', size=(8, 1)), sg.InputText(task['duration']) ],
                         [ sg.Button('Close', font=GLOBAL_FONT) ]
                     ]
-        
+
         if 'stoptime' in task.keys():
-            layout.insert(2, [ sg.Text('Stop Time'), sg.InputText(task['stoptime'].strftime("%H:%M:%S")) ])
+            layout.insert(2, [ sg.Text('Stop Time'), \
+                sg.InputText(task['stoptime'].strftime("%H:%M:%S")) ])
 
         _, _ = sg.Window('Task Details', layout).read(close=True)
 
-        text = str(task['tag'][0]) + "\n" 
-        text += "Start Time: " + str(task['starttime']) + "\n" 
+        text = str(task['tag'][0]) + "\n"
+        text += "Start Time: " + str(task['starttime']) + "\n"
 
         if 'stoptime' in task.keys():
             text += "Stop Time: " + str(task['stoptime']) + "\n"
@@ -328,9 +329,9 @@ class TwButtonLogic:
         return text, result_display
 
     def button_logic(self, event: str, values) -> tuple[bytes, str]:
-        ''' 
-        Execute Button based events executing TimeWarrior CLI commands 
-        Command line is extended based on the button selection and outputs 
+        '''
+        Execute Button based events executing TimeWarrior CLI commands
+        Command line is extended based on the button selection and outputs
         of the hander functions when used
         '''
 
@@ -358,7 +359,7 @@ class TwButtonLogic:
         elif event == "Refresh":
             result_display = "Default: See Results"
         elif event == "Details":
-            ouput, result_display = self.button_details(values)
+            _, result_display = self.button_details(values)
         else:
             result_display = "Button not Matched"
             logging.error("******* Button not Matched '%s' *************", event)
@@ -416,7 +417,7 @@ def main():
         table_data = [[" "*25,""]]
 
     active_timer = twbuttonlogic.get_active_timer()
-    
+
     #
     # Define the window's contents
     sg.theme(THEME)
@@ -430,13 +431,15 @@ def main():
                         font=GLOBAL_FONT) ],
                 [ sg.Text("Stop time:", size=(8, 1), font=GLOBAL_FONT), sg.Input(key="stoptime", \
                     size=(12,1), font=GLOBAL_FONT), sg.Text("EX: 15:00", font=GLOBAL_FONT) ],
-                [ sg.Text("Date:", size=(8, 1), font=GLOBAL_FONT), sg.Input(key="date", size=(12,1), \
-                    font=GLOBAL_FONT), sg.Text("EX: 2020-10-01", font=GLOBAL_FONT) ]
+                [ sg.Text("Date:", size=(8, 1), font=GLOBAL_FONT), sg.Input(key="date", \
+                    size=(12,1), font=GLOBAL_FONT), sg.Text("EX: 2020-10-01", font=GLOBAL_FONT) ]
             ], title='Date')],
             # Buttons
             [ sg.Button('Start', font=GLOBAL_FONT), sg.Button('Stop', font=GLOBAL_FONT), \
-                sg.Button('Modify', font=GLOBAL_FONT), sg.Button('Track', font=GLOBAL_FONT), sg.Button('Rename', font=GLOBAL_FONT)],
-            [ sg.Button('Continue', font=GLOBAL_FONT), sg.Button('Delete', font=GLOBAL_FONT), sg.Button('Details', font=GLOBAL_FONT), sg.Button('Refresh', font=GLOBAL_FONT)],
+                sg.Button('Modify', font=GLOBAL_FONT), sg.Button('Track', font=GLOBAL_FONT), \
+                sg.Button('Rename', font=GLOBAL_FONT)],
+            [ sg.Button('Continue', font=GLOBAL_FONT), sg.Button('Delete', font=GLOBAL_FONT), \
+                sg.Button('Details', font=GLOBAL_FONT), sg.Button('Refresh', font=GLOBAL_FONT)],
             # Text Boxes
             [ sg.Text(size=(40,1), key='status_result', font=GLOBAL_FONT) ],
             [ sg.MLine(key="cliout", size=(40,8), font=GLOBAL_FONT) ],
@@ -453,7 +456,8 @@ def main():
         ]
 
     if ICALBUDDY_ENABLE:
-        calendar_buttons = [ sg.Button('Start Meeting', font=GLOBAL_FONT), sg.Button('Fix Start', font=GLOBAL_FONT) ]
+        calendar_buttons = [ sg.Button('Start Meeting', font=GLOBAL_FONT), \
+            sg.Button('Fix Start', font=GLOBAL_FONT) ]
         layout.insert(4, calendar_buttons)
 
     window = sg.Window('Timewarrior Tracking', layout)
