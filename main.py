@@ -15,7 +15,7 @@ __status__ = "Production"
 import logging
 from datetime import datetime
 import PySimpleGUI as sg
-from twapi import TwButtonLogic
+from twguiapi import TwButtonLogic
 import config
 
 

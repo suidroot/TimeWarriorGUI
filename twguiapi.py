@@ -353,7 +353,7 @@ class TwButtonLogic:
 
         sg.Window('Task Details', layout).read(close=True)
 
-        return None
+        return 0
 
     def button_celendar_track(self, cli: str):
         ''' Create Task based on calendar entry from today '''
@@ -405,7 +405,7 @@ class TwButtonLogic:
     ##### Stop methods supporting UI button elements
     #
 
-    def button_logic(self, event: str, values: dict) -> tuple[bytes, str]:
+    def button_logic(self, event: str, values: dict) -> 'tuple[bytes, str]':
         '''
         Execute Button based events executing TimeWarrior CLI commands
         Command line is extended based on the button selection and outputs
