@@ -214,8 +214,9 @@ class TwButtonLogic:
 
             if task_item['id'] == task_no:
                 task = task_item
-                logging.debug("task: found %s", task)
                 break
+
+        logging.debug("task: found %s", task)
 
         return task
 
@@ -361,17 +362,9 @@ class TwButtonLogic:
             layout.insert(2, [ sg.Text('Stop Time'), \
                 sg.InputText(stop_time.strftime("%H:%M:%S")) ])
 
-        _, _ = sg.Window('Task Details', layout).read(close=True)
+        sg.Window('Task Details', layout).read(close=True)
 
-        text = str(task['tag'][0]) + "\n"
-        text += "Start Time: " + str(task['starttime']) + "\n"
-
-        if 'stoptime' in task.keys():
-            text += "Stop Time: " + str(task['stoptime']) + "\n"
-
-        result_display = ''
-
-        return text, result_display
+        return None
 
     def button_celendar_track(self, cli: str):
         ''' Create Task based on calendar entry from today '''
@@ -453,7 +446,8 @@ class TwButtonLogic:
         elif event == "Refresh":
             result_display = "Default: See Results"
         elif event == "Details":
-            _, result_display = self.button_details(values)
+            self.button_details(values)
+            result_display = ""
         elif event == "Calendar Track":
             cli, result_display = self.button_celendar_track(cli)
         else:
