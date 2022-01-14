@@ -22,6 +22,7 @@ THEME = "Dark Grey 4"
 GLOBAL_FONT = "Any 11"
 CLI_BASE_COMMAND = 'timew'
 ICALBUDDY_LOCATION = '/usr/local/bin/icalbuddy'
+ICALBUDDY_CALENDAR='Calendar'
 ICALBUDDY_ENABLE = True
 
 # Enable Debug output
@@ -73,41 +74,44 @@ class TwButtonLogic:
 
     #
     ## Start iCalBuddy Function
-    def get_current_calendar_entry(self) -> str:
+    def run_icalbuddy(self, date_range: str, exclude_fields='url,location,notes,attendees') -> str:
         '''
-        Use icalbuddy to get the meeting on your calendar right now
-        '''
-
-        cli = [ICALBUDDY_LOCATION,
-            '-npn', '-ea', '-nc', '-b', '',
-            '-ps', '" - "',
-            '-eep', 'url,location,notes,attendees,datetime',
-            '-ic', 'Calendar', 'eventsNow', ]
-
-        stdout = self.execute_cli(cli)
-
-        return str(stdout, ENCODING)
-
-    def get_current_calendar_starttime(self) -> str:
-        '''
-        Use icalbuddy to get the start time of the currnet meeting on your calendar right now
+        Run iCalBuddy Commands
+        return output as str
         '''
 
         cli = [ICALBUDDY_LOCATION,
             '-npn', '-ea', '-nc', '-b', '',
             '-ps', '" | "',
-            '-eep', 'url,location,notes,attendees',
-            '-ic', 'Calendar', 'eventsNow', ]
+            '-eep', exclude_fields,
+            '-ic', ICALBUDDY_CALENDAR, date_range, ]
 
         stdout = self.execute_cli(cli)
-        logging.debug("stdout: %s", stdout)
 
-        start_time = str(stdout).split("|")[1].split(" - ")[0].strip()
-        logging.debug("stdout: %s", start_time)
+        return str(stdout, ENCODING)
+
+
+    def get_current_calendar_entry(self) -> str:
+        '''
+        Use icalbuddy to get the meeting on your calendar right now
+        '''
+        stdout = self.run_icalbuddy('eventsNow', \
+            exclude_fields='url,location,notes,attendees,datetime')
+
+        return stdout
+
+    def get_current_calendar_starttime(self) -> str:
+        '''
+        Use icalbuddy to get the start time of the currnet meeting on your calendar right now
+        '''
+        stdout = self.run_icalbuddy('eventsNow')
+
+        start_time = stdout.split("|")[1].split(" - ")[0].strip()
+        logging.debug("start_time: %s", start_time)
 
         return start_time
 
-    def get_calendar_entries(self, date_range='today'):
+    def get_calendar_entries(self, date_range='today') -> list:
         '''
         Collect calendar entries from icalbuddy
         returns list of lists containing task name, start time,  stop time
@@ -119,14 +123,9 @@ class TwButtonLogic:
         if date_range == 'today':
             icalbuddy_command = 'eventsToday'
 
-        cli = [ICALBUDDY_LOCATION,
-            '-npn', '-ea', '-nc', '-b', '',
-            '-ps', '" | "',
-            '-eep', 'url,location,notes,attendees',
-            '-ic', 'Calendar', icalbuddy_command, ]
+        stdout = self.run_icalbuddy(icalbuddy_command)
 
-        stdout = self.execute_cli(cli)
-        output_list = str(stdout, ENCODING).split("\n")
+        output_list = stdout.split("\n")
         for i in output_list:
             logging.debug("i: %s", i)
             try:
@@ -145,7 +144,7 @@ class TwButtonLogic:
     ## End iCalBuddy Function
     #
 
-    def collect_tasks_list(self, duration='day'):
+    def collect_tasks_list(self, duration='day') -> int:
         '''
         Collect list of tracked tasks (default to today)
         Store in object variable
@@ -202,7 +201,7 @@ class TwButtonLogic:
 
         return table_data, max_tag_len
 
-    def return_task_details(self, values):
+    def return_task_details(self, values: dict):
         ''' Return details of a specific task '''
 
         task_no, _ = self.get_tw_taskid_from_timetable(values['timew_table'])
@@ -238,7 +237,7 @@ class TwButtonLogic:
     #
     ##### Start methods supporting UI button elements
     @staticmethod
-    def button_start(values, cli) -> tuple[str, str]:
+    def button_start(values: dict, cli: str) -> tuple[str, str]:
         ''' Run buttons starting with "Start" '''
 
         cli.append("start")
@@ -254,7 +253,7 @@ class TwButtonLogic:
         return cli, result_display
 
     @staticmethod
-    def button_track(values, cli) -> tuple[str, str]:
+    def button_track(values: dict, cli: str) -> tuple[str, str]:
         ''' Run buttons starting with "Track" '''
 
         if values['date'] != '':
@@ -271,7 +270,7 @@ class TwButtonLogic:
         return cli, result_display
 
     @staticmethod
-    def button_stop(values, cli) -> tuple[str, str]:
+    def button_stop(values, cli: str) -> tuple[str, str]:
         ''' Run buttons starting with "Stop" '''
 
         cli.append("stop")
@@ -282,7 +281,7 @@ class TwButtonLogic:
 
         return cli, result_display
 
-    def button_rename(self, values, cli: str) -> tuple[str, str]:
+    def button_rename(self, values: dict, cli: str) -> tuple[str, str]:
         ''' Run buttons starting with "Rename" '''
 
         task = self.return_task_details(values)
@@ -315,7 +314,7 @@ class TwButtonLogic:
 
         return cli, result_display
 
-    def button_continue_delete(self, event, values, cli: str) -> tuple[str, str]:
+    def button_continue_delete(self, event: str, values: dict, cli: str) -> tuple[str, str]:
         ''' Run commands for Delete or Continue '''
 
         command = event.lower()
@@ -325,7 +324,7 @@ class TwButtonLogic:
 
         return cli, result_display
 
-    def button_modify(self, values, cli: str) -> tuple[str, str]:
+    def button_modify(self, values: dict, cli: str) -> tuple[str, str]:
         ''' Modify start or stop time of a task '''
         # TODO: ability to modify start and stop at time time
         task_no, _ = self.get_tw_taskid_from_timetable(values['timew_table'])
@@ -343,12 +342,11 @@ class TwButtonLogic:
 
         return cli, result_display
 
-    def button_details(self, values):
+    def button_details(self, values: dict):
         ''' Collect and display details of a selected specific task '''
         task = self.return_task_details(values)
 
         start_time = utc_to_local(task['starttime'])
-        stop_time = utc_to_local(task['stoptime'])
 
         layout = [
                         [ sg.Text('Task Tag', size=(8, 1)), sg.InputText( str(task['tag'][0]) ) ],
@@ -359,6 +357,7 @@ class TwButtonLogic:
                     ]
 
         if 'stoptime' in task.keys():
+            stop_time = utc_to_local(task['stoptime'])
             layout.insert(2, [ sg.Text('Stop Time'), \
                 sg.InputText(stop_time.strftime("%H:%M:%S")) ])
 
@@ -374,7 +373,7 @@ class TwButtonLogic:
 
         return text, result_display
 
-    def button_celendar_track(self, cli):
+    def button_celendar_track(self, cli: str):
         ''' Create Task based on calendar entry from today '''
 
         calendar_entries = self.get_calendar_entries()
@@ -394,19 +393,27 @@ class TwButtonLogic:
         ]
 
         event, values = sg.Window('Calendar', layout).read(close=True)
+        logging.debug("values['calendar_entry']: %s", values['calendar_entry'])
 
-        if event == 'Track':
-            logging.debug(calendar_entries[values['calendar_entry'][0]])
+        if event == 'Track' and values['calendar_entry'] != []:
+            logging.debug("calendar_entries[values['calendar_entry'][0]]: %s ", \
+                calendar_entries[values['calendar_entry'][0]])
             values['taskdesc'] = calendar_entries[values['calendar_entry'][0]][0]
             values['starttime']= calendar_entries[values['calendar_entry'][0]][1]
             values['stoptime'] = calendar_entries[values['calendar_entry'][0]][2]
             values['date'] = ''
 
             return_data = self.button_track(values, cli)
+        elif event == 'Track' and values['calendar_entry'] == []:
+            sg.Popup("Must Select an entry in list")
+            cli = None
+            result_display = "Must Select an entry in list"
+
+            return_data = [ cli, result_display ]
 
         else:
             cli = None
-            result_display = "canceled"
+            result_display = "Canceled"
 
             return_data = [ cli, result_display ]
 
@@ -415,7 +422,7 @@ class TwButtonLogic:
     ##### Stop methods supporting UI button elements
     #
 
-    def button_logic(self, event: str, values) -> tuple[bytes, str]:
+    def button_logic(self, event: str, values: dict) -> tuple[bytes, str]:
         '''
         Execute Button based events executing TimeWarrior CLI commands
         Command line is extended based on the button selection and outputs
@@ -486,7 +493,7 @@ def validate_time(time_text: str) -> bool:
 
     return return_val
 
-def utc_to_local(utc_dt):
+def utc_to_local(utc_dt: datetime) -> datetime:
     ''' Convert datetime object to local time from UTC'''
     return utc_dt.replace(tzinfo=timezone.utc).astimezone(tz=None)
 
