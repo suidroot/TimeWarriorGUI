@@ -2,12 +2,12 @@
 
 This is a script to provide a simple GUI to the TimeWarrior CLI application, allowing to add and stop time trackers.
 
-Features
+## Features
 * Allows to start, stop, rename, coninue and delete tasks
 * Rename tag on a task
 * Integration with [iCalBuddy](https://hasseg.org/icalBuddy/) to simplify Meeting tracking on Macs
 
-Limitation
+## Limitation
 * Does not support multiple tags on a task, will only uses first Tag on a task as name
 
 
@@ -24,3 +24,6 @@ pip3 install -r requirements.txt
 ```
 python3 main.py
 ```
+
+## Configuration
+There are various configuration options in the `config.py` file to customize the UI or location of the executable.
