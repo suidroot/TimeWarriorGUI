@@ -5,7 +5,6 @@ import logging
 THEME = "Dark Grey 4"
 GLOBAL_FONT = "Any 11"
 
-
 # Enable Debug output
 #LOGGING_LEVEL = logging.ERROR # DEBUG
 LOGGING_LEVEL = logging.DEBUG

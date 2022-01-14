@@ -6,7 +6,7 @@
 
 __author__ = "Ben Mason"
 __copyright__ = "Copyright 2022"
-__version__ = "1.6.0"
+__version__ = "2.0.0"
 __email__ = "locutus@the-collective.net"
 __status__ = "Production"
 

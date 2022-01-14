@@ -6,18 +6,15 @@
 
 __author__ = "Ben Mason"
 __copyright__ = "Copyright 2022"
-__version__ = "1.6.0"
+__version__ = "2.0.0"
 __email__ = "locutus@the-collective.net"
 __status__ = "Production"
-
-
 
 import logging
 from datetime import datetime
 import PySimpleGUI as sg
 from twguiapi import TwButtonLogic
 import config
-
 
 def validate_date(date_text: str) -> bool:
     ''' Validate Date is correct format '''
@@ -42,8 +39,6 @@ def validate_time(time_text: str) -> bool:
         return_val = True
 
     return return_val
-
-
 
 def main():
     ''' Main Function '''

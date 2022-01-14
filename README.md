@@ -15,12 +15,12 @@ Limitation
 
 ## Install and Run
 
-1. You need PySimpleGUI:
+1. Install requirements:
 ```bash
-pip3 install PySimpleGUI
+pip3 install -r requirements.txt
 ```
 2. Clone current version or download release
 3. To execute run following command from location of files
 ```
-python3 tw-gui.py
+python3 main.py
 ```
