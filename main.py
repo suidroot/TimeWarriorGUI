@@ -13,10 +13,10 @@ __status__ = "Production"
 
 
 import logging
-import config
-from twApi import TwButtonLogic
 from datetime import datetime
 import PySimpleGUI as sg
+from twapi import TwButtonLogic
+import config
 
 
 def validate_date(date_text: str) -> bool:
@@ -75,20 +75,24 @@ def main():
             [ sg.Text("Task:", font=config.GLOBAL_FONT), sg.Input(key="taskdesc", size=(35,1), \
                 font=config.GLOBAL_FONT) ],
             [ sg.Frame(layout=[
-                [ sg.Text("Start Time:", size=(8, 1), font=config.GLOBAL_FONT), sg.Input(key="starttime", \
-                    size=(12,1), font=config.GLOBAL_FONT), sg.Text("EX: 15:00", \
-                        font=config.GLOBAL_FONT) ],
-                [ sg.Text("Stop time:", size=(8, 1), font=config.GLOBAL_FONT), sg.Input(key="stoptime", \
-                    size=(12,1), font=config.GLOBAL_FONT), sg.Text("EX: 15:00", font=config.GLOBAL_FONT) ],
+                [ sg.Text("Start Time:", size=(8, 1), font=config.GLOBAL_FONT), \
+                    sg.Input(key="starttime", size=(12,1), font=config.GLOBAL_FONT), \
+                        sg.Text("EX: 15:00", font=config.GLOBAL_FONT) ],
+                [ sg.Text("Stop time:", size=(8, 1), font=config.GLOBAL_FONT), \
+                    sg.Input(key="stoptime", size=(12,1), font=config.GLOBAL_FONT), \
+                    sg.Text("EX: 15:00", font=config.GLOBAL_FONT) ],
                 [ sg.Text("Date:", size=(8, 1), font=config.GLOBAL_FONT), sg.Input(key="date", \
-                    size=(12,1), font=config.GLOBAL_FONT), sg.Text("EX: 2020-10-01", font=config.GLOBAL_FONT) ]
+                    size=(12,1), font=config.GLOBAL_FONT), sg.Text("EX: 2020-10-01", \
+                        font=config.GLOBAL_FONT) ]
             ], title='Date')],
             # Buttons
-            [ sg.Button('Start', font=config.GLOBAL_FONT), sg.Button('Stop', font=config.GLOBAL_FONT), \
-                sg.Button('Modify', font=config.GLOBAL_FONT), sg.Button('Track', font=config.GLOBAL_FONT), \
-                sg.Button('Rename', font=config.GLOBAL_FONT)],
-            [ sg.Button('Continue', font=config.GLOBAL_FONT), sg.Button('Delete', font=config.GLOBAL_FONT), \
-                sg.Button('Details', font=config.GLOBAL_FONT), sg.Button('Refresh', font=config.GLOBAL_FONT)],
+            [ sg.Button('Start', font=config.GLOBAL_FONT), sg.Button('Stop', \
+                font=config.GLOBAL_FONT), sg.Button('Modify', font=config.GLOBAL_FONT), \
+                sg.Button('Track', font=config.GLOBAL_FONT), sg.Button('Rename', \
+                font=config.GLOBAL_FONT)],
+            [ sg.Button('Continue', font=config.GLOBAL_FONT), sg.Button('Delete', \
+                font=config.GLOBAL_FONT), sg.Button('Details', font=config.GLOBAL_FONT), \
+                sg.Button('Refresh', font=config.GLOBAL_FONT)],
             # Calendar Buttons inserted here if enabled
             # Text Boxes
             [ sg.Text(size=(40,1), key='status_result', font=config.GLOBAL_FONT) ],

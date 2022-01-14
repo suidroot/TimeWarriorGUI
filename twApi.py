@@ -13,9 +13,10 @@ __status__ = "Production"
 import subprocess
 import json
 import logging
-import config
 from datetime import datetime, timezone
 import PySimpleGUI as sg
+import config
+
 
 def utc_to_local(utc_dt: datetime) -> datetime:
     ''' Convert datetime object to local time from UTC'''
@@ -208,7 +209,7 @@ class TwButtonLogic:
 
         return task
 
-    def get_tw_taskid_from_timetable(self, timetable) -> tuple[int,int]:
+    def get_tw_taskid_from_timetable(self, timetable) -> 'tuple[int,int]':
         ''' Collect the TimeWarrior taskid and GUI table id '''
 
         if timetable != []:
@@ -226,7 +227,7 @@ class TwButtonLogic:
     #
     ##### Start methods supporting UI button elements
     @staticmethod
-    def button_start(values: dict, cli: str) -> tuple[str, str]:
+    def button_start(values: dict, cli: str) -> 'tuple[str, str]':
         ''' Run buttons starting with "Start" '''
 
         cli.append("start")
@@ -242,7 +243,7 @@ class TwButtonLogic:
         return cli, result_display
 
     @staticmethod
-    def button_track(values: dict, cli: str) -> tuple[str, str]:
+    def button_track(values: dict, cli: str) -> 'tuple[str, str]':
         ''' Run buttons starting with "Track" '''
 
         if values['date'] != '':
@@ -259,7 +260,7 @@ class TwButtonLogic:
         return cli, result_display
 
     @staticmethod
-    def button_stop(values, cli: str) -> tuple[str, str]:
+    def button_stop(values, cli: str) -> 'tuple[str, str]':
         ''' Run buttons starting with "Stop" '''
 
         cli.append("stop")
@@ -270,7 +271,7 @@ class TwButtonLogic:
 
         return cli, result_display
 
-    def button_rename(self, values: dict, cli: str) -> tuple[str, str]:
+    def button_rename(self, values: dict, cli: str) -> 'tuple[str, str]':
         ''' Run buttons starting with "Rename" '''
 
         task = self.return_task_details(values)
@@ -289,7 +290,7 @@ class TwButtonLogic:
 
         return cli, result_display
 
-    def button_start_meeting(self, cli: str) -> tuple[str, str]:
+    def button_start_meeting(self, cli: str) -> 'tuple[str, str]':
         ''' Run Start Meeting from calendar info routine '''
 
         calendarentry = self.get_current_calendar_entry()
@@ -303,7 +304,7 @@ class TwButtonLogic:
 
         return cli, result_display
 
-    def button_continue_delete(self, event: str, values: dict, cli: str) -> tuple[str, str]:
+    def button_continue_delete(self, event: str, values: dict, cli: str) -> 'tuple[str, str]':
         ''' Run commands for Delete or Continue '''
 
         command = event.lower()
@@ -313,7 +314,7 @@ class TwButtonLogic:
 
         return cli, result_display
 
-    def button_modify(self, values: dict, cli: str) -> tuple[str, str]:
+    def button_modify(self, values: dict, cli: str) -> 'tuple[str, str]':
         ''' Modify start or stop time of a task '''
         # TODO: ability to modify start and stop at time time
         task_no, _ = self.get_tw_taskid_from_timetable(values['timew_table'])
@@ -370,7 +371,8 @@ class TwButtonLogic:
                     key='calendar_entry',
                     tooltip='Todays Data',
                     font=config.GLOBAL_FONT)],
-            [ sg.Button('Track', font=config.GLOBAL_FONT), sg.Button('Cancel', font=config.GLOBAL_FONT) ]
+            [ sg.Button('Track', font=config.GLOBAL_FONT), sg.Button('Cancel', \
+                font=config.GLOBAL_FONT) ]
         ]
 
         event, values = sg.Window('Calendar', layout).read(close=True)

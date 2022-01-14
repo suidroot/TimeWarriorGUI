@@ -1,0 +1,2 @@
+PySimpleGUI>=4.39.1
+pytest>=6.2.1
