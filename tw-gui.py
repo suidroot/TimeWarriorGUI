@@ -5,8 +5,8 @@
 '''
 
 __author__ = "Ben Mason"
-__copyright__ = "Copyright 2021"
-__version__ = "1.5.0"
+__copyright__ = "Copyright 2022"
+__version__ = "1.6.0"
 __email__ = "locutus@the-collective.net"
 __status__ = "Production"
 
@@ -14,7 +14,7 @@ __status__ = "Production"
 import subprocess
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 import PySimpleGUI as sg
 
 # GUI Astetics
@@ -26,7 +26,7 @@ ICALBUDDY_ENABLE = True
 
 # Enable Debug output
 #LOGGING_LEVEL = logging.ERROR # DEBUG
-LOGGING_LEVEL = logging.ERROR
+LOGGING_LEVEL = logging.DEBUG
 LOGGING_FORMAT = '[%(levelname)s] %(asctime)s - %(funcName)s %(lineno)d - %(message)s'
 
 # Global Constants
@@ -56,7 +56,7 @@ class TwButtonLogic:
         return stdout
 
     def get_active_timer(self) -> str:
-        ''' Get Actively tracked task '''
+        ''' Get Actively tracked task and return tag '''
 
         cli = [CLI_BASE_COMMAND]
 
@@ -71,8 +71,12 @@ class TwButtonLogic:
 
         return result
 
-    def get_calendar_entry(self) -> str:
-        ''' Use icalbuddy to get the meeting on your calendar right now '''
+    #
+    ## Start iCalBuddy Function
+    def get_current_calendar_entry(self) -> str:
+        '''
+        Use icalbuddy to get the meeting on your calendar right now
+        '''
 
         cli = [ICALBUDDY_LOCATION,
             '-npn', '-ea', '-nc', '-b', '',
@@ -99,10 +103,47 @@ class TwButtonLogic:
         logging.debug("stdout: %s", stdout)
 
         start_time = str(stdout).split("|")[1].split(" - ")[0].strip()
-        #stop_time  = str(stdout).split("|")[1].split(" - ")[1][:-3] - Not used
         logging.debug("stdout: %s", start_time)
 
         return start_time
+
+    def get_calendar_entries(self, date_range='today'):
+        '''
+        Collect calendar entries from icalbuddy
+        returns list of lists containing task name, start time,  stop time
+        '''
+
+        return_list = []
+
+        # TODO: selectable date ranges
+        if date_range == 'today':
+            icalbuddy_command = 'eventsToday'
+
+        cli = [ICALBUDDY_LOCATION,
+            '-npn', '-ea', '-nc', '-b', '',
+            '-ps', '" | "',
+            '-eep', 'url,location,notes,attendees',
+            '-ic', 'Calendar', icalbuddy_command, ]
+
+        stdout = self.execute_cli(cli)
+        output_list = str(stdout, ENCODING).split("\n")
+        for i in output_list:
+            logging.debug("i: %s", i)
+            try:
+                tag, time = i.split(" | ")
+                starttime, endtime = time.split(' - ')
+                return_list.append([tag, starttime, endtime])
+            except ValueError:
+                if i != '':
+                    logging.error("Error with cenlendar entry %s", i)
+                else:
+                    continue
+
+        logging.debug("return_list: %s", return_list)
+
+        return return_list
+    ## End iCalBuddy Function
+    #
 
     def collect_tasks_list(self, duration='day'):
         '''
@@ -194,6 +235,8 @@ class TwButtonLogic:
 
         return task_no, table_no
 
+    #
+    ##### Start methods supporting UI button elements
     @staticmethod
     def button_start(values, cli) -> tuple[str, str]:
         ''' Run buttons starting with "Start" '''
@@ -261,7 +304,7 @@ class TwButtonLogic:
     def button_start_meeting(self, cli: str) -> tuple[str, str]:
         ''' Run Start Meeting from calendar info routine '''
 
-        calendarentry = self.get_calendar_entry()
+        calendarentry = self.get_current_calendar_entry()
         if calendarentry:
             cli.extend(["start", calendarentry])
             result_display = "Started meeting"
@@ -284,7 +327,7 @@ class TwButtonLogic:
 
     def button_modify(self, values, cli: str) -> tuple[str, str]:
         ''' Modify start or stop time of a task '''
-
+        # TODO: ability to modify start and stop at time time
         task_no, _ = self.get_tw_taskid_from_timetable(values['timew_table'])
         taskid = '@'+str(task_no)
 
@@ -301,20 +344,23 @@ class TwButtonLogic:
         return cli, result_display
 
     def button_details(self, values):
-        ''' Collect details of a specific task '''
+        ''' Collect and display details of a selected specific task '''
         task = self.return_task_details(values)
+
+        start_time = utc_to_local(task['starttime'])
+        stop_time = utc_to_local(task['stoptime'])
 
         layout = [
                         [ sg.Text('Task Tag', size=(8, 1)), sg.InputText( str(task['tag'][0]) ) ],
                         [ sg.Text('Start Time', size=(8, 1)), \
-                            sg.InputText(task['starttime'].strftime("%H:%M:%S")) ],
+                            sg.InputText(start_time.strftime("%H:%M:%S")) ],
                         [ sg.Text('Duration', size=(8, 1)), sg.InputText(task['duration']) ],
                         [ sg.Button('Close', font=GLOBAL_FONT) ]
                     ]
 
         if 'stoptime' in task.keys():
             layout.insert(2, [ sg.Text('Stop Time'), \
-                sg.InputText(task['stoptime'].strftime("%H:%M:%S")) ])
+                sg.InputText(stop_time.strftime("%H:%M:%S")) ])
 
         _, _ = sg.Window('Task Details', layout).read(close=True)
 
@@ -327,6 +373,47 @@ class TwButtonLogic:
         result_display = ''
 
         return text, result_display
+
+    def button_celendar_track(self, cli):
+        ''' Create Task based on calendar entry from today '''
+
+        calendar_entries = self.get_calendar_entries()
+
+        calendar_columns = ['Tag', 'Start', 'Stop']
+
+        layout = [
+            [ sg.Text("Todays Tasks", font=GLOBAL_FONT) ],
+            [ sg.Table(values=calendar_entries, headings=calendar_columns, max_col_width=40,
+                    display_row_numbers=False,
+                    justification='left',
+                    num_rows=20,
+                    key='calendar_entry',
+                    tooltip='Todays Data',
+                    font=GLOBAL_FONT)],
+            [ sg.Button('Track', font=GLOBAL_FONT), sg.Button('Cancel', font=GLOBAL_FONT) ]
+        ]
+
+        event, values = sg.Window('Calendar', layout).read(close=True)
+
+        if event == 'Track':
+            logging.debug(calendar_entries[values['calendar_entry'][0]])
+            values['taskdesc'] = calendar_entries[values['calendar_entry'][0]][0]
+            values['starttime']= calendar_entries[values['calendar_entry'][0]][1]
+            values['stoptime'] = calendar_entries[values['calendar_entry'][0]][2]
+            values['date'] = ''
+
+            return_data = self.button_track(values, cli)
+
+        else:
+            cli = None
+            result_display = "canceled"
+
+            return_data = [ cli, result_display ]
+
+        return return_data
+
+    ##### Stop methods supporting UI button elements
+    #
 
     def button_logic(self, event: str, values) -> tuple[bytes, str]:
         '''
@@ -345,8 +432,8 @@ class TwButtonLogic:
             cli, result_display = self.button_track(values, cli)
         elif event == 'Stop':
             cli, result_display = self.button_stop(values, cli)
-        # Modify start of current / last task
         elif event == "Modify":
+            # Modify start of current / last task
             cli, result_display = self.button_modify(values, cli)
         elif event == "Fix Start":
             start_time = self.get_current_calendar_starttime()
@@ -360,11 +447,14 @@ class TwButtonLogic:
             result_display = "Default: See Results"
         elif event == "Details":
             _, result_display = self.button_details(values)
+        elif event == "Calendar Track":
+            cli, result_display = self.button_celendar_track(cli)
         else:
             result_display = "Button not Matched"
             logging.error("******* Button not Matched '%s' *************", event)
 
         if cli:
+            # TODO: Run more then one command
             result = self.execute_cli(cli)
         else:
             # return null bytes for CLI output if cli is not set
@@ -396,14 +486,18 @@ def validate_time(time_text: str) -> bool:
 
     return return_val
 
+def utc_to_local(utc_dt):
+    ''' Convert datetime object to local time from UTC'''
+    return utc_dt.replace(tzinfo=timezone.utc).astimezone(tz=None)
+
 def main():
     ''' Main Function '''
 
     logging.basicConfig(level=LOGGING_LEVEL, format=LOGGING_FORMAT)
     twbuttonlogic = TwButtonLogic()
 
-    fields = [ "date", "starttime", "stoptime", "taskdesc" ]
-    timew_summary_columns = ['Tags', 'Duration']
+    input_tfields = [ "date", "starttime", "stoptime", "taskdesc" ]
+    timew_summary_columns = ['Tag', 'Duration']
 
     #
     # Load inital tracked time data
@@ -440,12 +534,13 @@ def main():
                 sg.Button('Rename', font=GLOBAL_FONT)],
             [ sg.Button('Continue', font=GLOBAL_FONT), sg.Button('Delete', font=GLOBAL_FONT), \
                 sg.Button('Details', font=GLOBAL_FONT), sg.Button('Refresh', font=GLOBAL_FONT)],
+            # Calendar Buttons inserted here if enabled
             # Text Boxes
             [ sg.Text(size=(40,1), key='status_result', font=GLOBAL_FONT) ],
             [ sg.MLine(key="cliout", size=(40,8), font=GLOBAL_FONT) ],
             [ sg.Text("Current Tracking:", font=GLOBAL_FONT), sg.Input(key="curr_tracking", \
                 size=(25,1), default_text=active_timer, font=GLOBAL_FONT) ],
-            [ sg.Text("Todays Time", font=GLOBAL_FONT) ],
+            [ sg.Text("Todays Tasks", font=GLOBAL_FONT) ],
             [ sg.Table(values=table_data, headings=timew_summary_columns, max_col_width=25,
                     display_row_numbers=False,
                     justification='left',
@@ -457,7 +552,8 @@ def main():
 
     if ICALBUDDY_ENABLE:
         calendar_buttons = [ sg.Button('Start Meeting', font=GLOBAL_FONT), \
-            sg.Button('Fix Start', font=GLOBAL_FONT) ]
+            sg.Button('Fix Start', font=GLOBAL_FONT), \
+            sg.Button('Calendar Track', font=GLOBAL_FONT)]
         layout.insert(4, calendar_buttons)
 
     window = sg.Window('Timewarrior Tracking', layout)
@@ -492,6 +588,9 @@ def main():
                 sg.popup('Invalid date please use format "HH:MM" data entered:', \
                     values['stoptime'])
                 continue
+        if values['stoptime'] != '' and values['starttime'] != '' and event == 'Modify':
+            sg.popup('Can only change start or end time, clear one of the fields')
+            continue
         if (event in ('Track', 'Start')) and values['taskdesc'] == '':
             sg.popup('Task Name Can not be Empty')
             continue
@@ -516,7 +615,7 @@ def main():
 
         #
         # clear input fields
-        for i in fields:
+        for i in input_tfields:
             window[i].update('')
 
     window.close()
