@@ -1,0 +1,5 @@
+#!/bin/sh
+
+SCRIPT_LOCATION=$HOME/src/TimeWarriorGUI
+
+nohup python3 $SCRIPT_LOCATION/main &
