@@ -1,6 +1,6 @@
 #!/usr/bin/which python3
 '''
-    This Script provide a GUI front-end to the TimeWarror CLI application
+    This script provides the backend logic for the GUI front end to interface with TimeWarrior
     Author: Ben Mason
 '''
 
@@ -21,6 +21,10 @@ import config
 def utc_to_local(utc_dt: datetime) -> datetime:
     ''' Convert datetime object to local time from UTC'''
     return utc_dt.replace(tzinfo=timezone.utc).astimezone(tz=None)
+
+def list_to_str(orig_list: list) -> str:
+    ''' Convert List into Comma sperated String '''
+    return ', '.join(orig_list)
 
 class TwButtonLogic:
     ''' This class hold the logic and actions for selected buttons '''
@@ -172,7 +176,7 @@ class TwButtonLogic:
 
         return len(table_dict)
 
-    def return_task_table(self):
+    def return_task_table(self) -> 'tuple[list,int]':
         ''' Return basic list of tasks used to generate list in UI '''
 
         table_data = []
@@ -181,7 +185,7 @@ class TwButtonLogic:
         self.collect_tasks_list()
 
         for task_item in self.todays_tasks:
-            table_data.append([task_item['tag'][0] , str(task_item['duration'])])
+            table_data.append([ list_to_str(task_item['tag']) , str(task_item['duration']) ])
 
             if max_tag_len < len(task_item['tag']):
                 max_tag_len = len(task_item['tag'])
@@ -272,7 +276,10 @@ class TwButtonLogic:
         return cli, result_display
 
     def button_rename(self, values: dict, cli: str) -> 'tuple[str, str]':
-        ''' Run buttons starting with "Rename" '''
+        '''
+        Run buttons starting with "Rename"
+        Change the text of the first tag on a task
+        '''
 
         task = self.return_task_details(values)
         old_description = task['tag'][0]
@@ -339,12 +346,12 @@ class TwButtonLogic:
         start_time = utc_to_local(task['starttime'])
 
         layout = [
-                        [ sg.Text('Task Tag', size=(8, 1)), sg.InputText( str(task['tag'][0]) ) ],
-                        [ sg.Text('Start Time', size=(8, 1)), \
-                            sg.InputText(start_time.strftime("%H:%M:%S")) ],
-                        [ sg.Text('Duration', size=(8, 1)), sg.InputText(task['duration']) ],
-                        [ sg.Button('Close', size=(config.BUTTON_SIZE, 1), font=config.GLOBAL_FONT) ]
-                    ]
+                    [ sg.Text('Task Tag', size=(8, 1)), sg.InputText( list_to_str(task['tag']) ) ],
+                    [ sg.Text('Start Time', size=(8, 1)), \
+                        sg.InputText(start_time.strftime("%H:%M:%S")) ],
+                    [ sg.Text('Duration', size=(8, 1)), sg.InputText(task['duration']) ],
+                    [ sg.Button('Close', size=(config.BUTTON_SIZE, 1), font=config.GLOBAL_FONT) ]
+                ]
 
         if 'stoptime' in task.keys():
             stop_time = utc_to_local(task['stoptime'])
@@ -355,7 +362,7 @@ class TwButtonLogic:
 
         return 0
 
-    def button_celendar_track(self, cli: str):
+    def button_celendar_track(self, cli: str) -> list:
         ''' Create Task based on calendar entry from today '''
 
         calendar_entries = self.get_calendar_entries()

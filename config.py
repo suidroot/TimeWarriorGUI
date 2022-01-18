@@ -1,4 +1,6 @@
-
+'''
+    Configuration of the TimeWarrior GUI scripts
+'''
 import logging
 
 # GUI Astetics
