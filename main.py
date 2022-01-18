@@ -43,6 +43,8 @@ def validate_time(time_text: str) -> bool:
 def main():
     ''' Main Function '''
 
+    table_data = []
+
     logging.basicConfig(level=config.LOGGING_LEVEL, format=config.LOGGING_FORMAT)
     twbuttonlogic = TwButtonLogic()
 
@@ -57,8 +59,9 @@ def main():
     logging.debug("tag_len: %s", tag_len)
 
     # if empty table set correct column and rows
-    if table_data == []:
-        table_data = [[" "*25,""]]
+
+    table_data.append([" "*27,""])
+
 
     active_timer = twbuttonlogic.get_active_timer()
 
@@ -67,35 +70,38 @@ def main():
     sg.theme(config.THEME)
 
     layout = [
-            [ sg.Text("Task:", font=config.GLOBAL_FONT), sg.Input(key="taskdesc", size=(35,1), \
-                font=config.GLOBAL_FONT) ],
+            [ sg.Text("Task:", size=(5, 1), font=config.GLOBAL_FONT), \
+                sg.Input(key="taskdesc", size=(35,1), font=config.GLOBAL_FONT) ], \
             [ sg.Frame(layout=[
                 [ sg.Text("Start Time:", size=(8, 1), font=config.GLOBAL_FONT), \
                     sg.Input(key="starttime", size=(12,1), font=config.GLOBAL_FONT), \
-                        sg.Text("EX: 15:00", font=config.GLOBAL_FONT) ],
+                    sg.Text("EX: 15:00", font=config.GLOBAL_FONT) ],
                 [ sg.Text("Stop time:", size=(8, 1), font=config.GLOBAL_FONT), \
                     sg.Input(key="stoptime", size=(12,1), font=config.GLOBAL_FONT), \
                     sg.Text("EX: 15:00", font=config.GLOBAL_FONT) ],
-                [ sg.Text("Date:", size=(8, 1), font=config.GLOBAL_FONT), sg.Input(key="date", \
-                    size=(12,1), font=config.GLOBAL_FONT), sg.Text("EX: 2020-10-01", \
-                        font=config.GLOBAL_FONT) ]
-            ], title='Date')],
+                [ sg.Text("Date:", size=(8, 1), font=config.GLOBAL_FONT), \
+                    sg.Input(key="date", size=(12,1), font=config.GLOBAL_FONT), \
+                    sg.Text("EX: 2020-10-01", size=(16,1), font=config.GLOBAL_FONT) ]
+            ], title='Date') ],
             # Buttons
-            [ sg.Button('Start', font=config.GLOBAL_FONT), sg.Button('Stop', \
-                font=config.GLOBAL_FONT), sg.Button('Modify', font=config.GLOBAL_FONT), \
-                sg.Button('Track', font=config.GLOBAL_FONT), sg.Button('Rename', \
-                font=config.GLOBAL_FONT)],
-            [ sg.Button('Continue', font=config.GLOBAL_FONT), sg.Button('Delete', \
-                font=config.GLOBAL_FONT), sg.Button('Details', font=config.GLOBAL_FONT), \
-                sg.Button('Refresh', font=config.GLOBAL_FONT)],
+            [ sg.Button('Start', size=(config.BUTTON_SIZE, 1), font=config.GLOBAL_FONT), \
+                sg.Button('Stop', size=(config.BUTTON_SIZE, 1), font=config.GLOBAL_FONT), \
+                sg.Button('Modify', size=(config.BUTTON_SIZE, 1), font=config.GLOBAL_FONT), \
+                sg.Button('Track', size=(config.BUTTON_SIZE, 1), font=config.GLOBAL_FONT), ],
+            [ sg.Button('Continue', size=(config.BUTTON_SIZE, 1), font=config.GLOBAL_FONT),  \
+                sg.Button('Delete', size=(config.BUTTON_SIZE, 1),font=config.GLOBAL_FONT), \
+                sg.Button('Details', size=(config.BUTTON_SIZE, 1), font=config.GLOBAL_FONT), \
+                sg.Button('Rename', size=(config.BUTTON_SIZE, 1), font=config.GLOBAL_FONT) ], \
+            [ sg.Button('Refresh', size=(config.BUTTON_SIZE, 1), font=config.GLOBAL_FONT), ],
             # Calendar Buttons inserted here if enabled
             # Text Boxes
-            [ sg.Text(size=(40,1), key='status_result', font=config.GLOBAL_FONT) ],
+            [ sg.Text("Current Tracking:", size=(13,1), font=config.GLOBAL_FONT), 
+              sg.Input(key="curr_tracking", size=(27,1), default_text=active_timer, \
+                  font=config.GLOBAL_FONT) ],
             [ sg.MLine(key="cliout", size=(40,8), font=config.GLOBAL_FONT) ],
-            [ sg.Text("Current Tracking:", font=config.GLOBAL_FONT), sg.Input(key="curr_tracking", \
-                size=(25,1), default_text=active_timer, font=config.GLOBAL_FONT) ],
+            [ sg.Text(size=(40,1), key='status_result', font=config.GLOBAL_FONT) ],
             [ sg.Text("Todays Tasks", font=config.GLOBAL_FONT) ],
-            [ sg.Table(values=table_data, headings=timew_summary_columns, max_col_width=25,
+            [ sg.Table(values=table_data, headings=timew_summary_columns, max_col_width=30,
                     display_row_numbers=False,
                     justification='left',
                     num_rows=20,
@@ -106,7 +112,7 @@ def main():
 
     if config.ICALBUDDY_ENABLE:
         calendar_buttons = [ sg.Button('Start Meeting', font=config.GLOBAL_FONT), \
-            sg.Button('Fix Start', font=config.GLOBAL_FONT), \
+            sg.Button('Fix Start', size=(config.BUTTON_SIZE, 1), font=config.GLOBAL_FONT), \
             sg.Button('Calendar Track', font=config.GLOBAL_FONT)]
         layout.insert(4, calendar_buttons)
 

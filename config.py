@@ -4,10 +4,11 @@ import logging
 # GUI Astetics
 THEME = "Dark Grey 4"
 GLOBAL_FONT = "Any 11"
+BUTTON_SIZE = 8
 
 # Enable Debug output
 #LOGGING_LEVEL = logging.ERROR # DEBUG
-LOGGING_LEVEL = logging.DEBUG
+LOGGING_LEVEL = logging.ERROR
 LOGGING_FORMAT = '[%(levelname)s] %(asctime)s - %(funcName)s %(lineno)d - %(message)s'
 
 # Global Constants

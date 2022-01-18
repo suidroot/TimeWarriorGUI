@@ -343,7 +343,7 @@ class TwButtonLogic:
                         [ sg.Text('Start Time', size=(8, 1)), \
                             sg.InputText(start_time.strftime("%H:%M:%S")) ],
                         [ sg.Text('Duration', size=(8, 1)), sg.InputText(task['duration']) ],
-                        [ sg.Button('Close', font=config.GLOBAL_FONT) ]
+                        [ sg.Button('Close', size=(config.BUTTON_SIZE, 1), font=config.GLOBAL_FONT) ]
                     ]
 
         if 'stoptime' in task.keys():
@@ -371,8 +371,8 @@ class TwButtonLogic:
                     key='calendar_entry',
                     tooltip='Todays Data',
                     font=config.GLOBAL_FONT)],
-            [ sg.Button('Track', font=config.GLOBAL_FONT), sg.Button('Cancel', \
-                font=config.GLOBAL_FONT) ]
+            [ sg.Button('Track', size=(config.BUTTON_SIZE, 1), font=config.GLOBAL_FONT), \
+                sg.Button('Cancel', size=(config.BUTTON_SIZE, 1), font=config.GLOBAL_FONT) ]
         ]
 
         event, values = sg.Window('Calendar', layout).read(close=True)
