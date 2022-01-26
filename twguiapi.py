@@ -19,12 +19,25 @@ import config
 
 
 def utc_to_local(utc_dt: datetime) -> datetime:
-    ''' Convert datetime object to local time from UTC'''
+    ''' Convert datetime object to local time from UTC '''
     return utc_dt.replace(tzinfo=timezone.utc).astimezone(tz=None)
 
 def list_to_str(orig_list: list) -> str:
     ''' Convert List into Comma sperated String '''
     return ', '.join(orig_list)
+
+def error_popup(popup_message: str) -> 'tuple[str,str]':
+    ''' 
+    Popup error dialog with message
+    Returns blank cli and 'Error' return message
+    '''
+
+    sg.popup("ERROR: " + popup_message)
+
+    cli = ""
+    results_display = "Error"
+
+    return cli, results_display
 
 class TwButtonLogic:
     ''' This class hold the logic and actions for selected buttons '''
@@ -305,9 +318,7 @@ class TwButtonLogic:
             cli.extend(["start", calendarentry])
             result_display = "Started meeting"
         else:
-            sg.popup('Nothing available on Calendar')
-            result_display = 'Nothing available on Calendar'
-            cli = None
+            cli, result_display = error_popup('Nothing available on Calendar')
 
         return cli, result_display
 
@@ -333,6 +344,8 @@ class TwButtonLogic:
         elif values['stoptime'] != "":
             modify_time = values['stoptime']
             modify_mode = "end"
+        else: 
+            return error_popup('Please enter a time')
 
         cli.extend(['modify', modify_mode, taskid, modify_time])
         result_display = "Modified " + modify_mode + " time to " + modify_time
@@ -395,9 +408,7 @@ class TwButtonLogic:
 
             return_data = self.button_track(values, cli)
         elif event == 'Track' and values['calendar_entry'] == []:
-            sg.Popup("Must Select an entry in list")
-            cli = None
-            result_display = "Must Select an entry in list"
+            cli, result_display = error_popup("Must Select an entry in list")
 
             return_data = [ cli, result_display ]
 
