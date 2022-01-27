@@ -27,7 +27,7 @@ def list_to_str(orig_list: list) -> str:
     return ', '.join(orig_list)
 
 def error_popup(popup_message: str) -> 'tuple[str,str]':
-    ''' 
+    '''
     Popup error dialog with message
     Returns blank cli and 'Error' return message
     '''
@@ -96,7 +96,6 @@ class TwButtonLogic:
 
         return str(stdout, config.ENCODING)
 
-
     def get_current_calendar_entry(self) -> str:
         '''
         Use icalbuddy to get the meeting on your calendar right now
@@ -140,7 +139,7 @@ class TwButtonLogic:
                 return_list.append([tag, starttime, endtime])
             except ValueError:
                 if i != '':
-                    logging.error("Error with cenlendar entry %s", i)
+                    logging.error("Error with calendar entry %s", i)
                 else:
                     continue
 
@@ -344,7 +343,7 @@ class TwButtonLogic:
         elif values['stoptime'] != "":
             modify_time = values['stoptime']
             modify_mode = "end"
-        else: 
+        else:
             return error_popup('Please enter a time')
 
         cli.extend(['modify', modify_mode, taskid, modify_time])
@@ -375,9 +374,8 @@ class TwButtonLogic:
 
         return 0
 
-    def button_celendar_track(self, cli: str) -> list:
+    def button_calendar_track(self, cli: str) -> list:
         ''' Create Task based on calendar entry from today '''
-
         calendar_entries = self.get_calendar_entries()
 
         calendar_columns = ['Tag', 'Start', 'Stop']
@@ -392,25 +390,40 @@ class TwButtonLogic:
                     tooltip='Todays Data',
                     font=config.GLOBAL_FONT)],
             [ sg.Button('Track', size=(config.BUTTON_SIZE, 1), font=config.GLOBAL_FONT), \
-                sg.Button('Cancel', size=(config.BUTTON_SIZE, 1), font=config.GLOBAL_FONT) ]
+                sg.Button('Cancel', size=(config.BUTTON_SIZE, 1), font=config.GLOBAL_FONT), \
+                sg.Checkbox(text='Set Start Time', font=config.GLOBAL_FONT, \
+                    key='setstarttime', default=True), \
+                sg.Checkbox(text='Set Stop Time', font=config.GLOBAL_FONT, \
+                    key='setstoptime', default=True)
+            ]
         ]
 
         event, values = sg.Window('Calendar', layout).read(close=True)
         logging.debug("values['calendar_entry']: %s", values['calendar_entry'])
 
-        if event == 'Track' and values['calendar_entry'] != []:
-            logging.debug("calendar_entries[values['calendar_entry'][0]]: %s ", \
-                calendar_entries[values['calendar_entry'][0]])
-            values['taskdesc'] = calendar_entries[values['calendar_entry'][0]][0]
-            values['starttime']= calendar_entries[values['calendar_entry'][0]][1]
-            values['stoptime'] = calendar_entries[values['calendar_entry'][0]][2]
-            values['date'] = ''
+        if event == 'Track':
+            if values['calendar_entry'] != []:
+                logging.debug("calendar_entries[values['calendar_entry'][0]]: %s ", \
+                    calendar_entries[values['calendar_entry'][0]])
+                values['taskdesc'] = calendar_entries[values['calendar_entry'][0]][0]
+                values['starttime'] = calendar_entries[values['calendar_entry'][0]][1]
+                values['stoptime'] = calendar_entries[values['calendar_entry'][0]][2]
+                values['date'] = ''
 
-            return_data = self.button_track(values, cli)
-        elif event == 'Track' and values['calendar_entry'] == []:
-            cli, result_display = error_popup("Must Select an entry in list")
+                if values['setstarttime'] is True and values['setstoptime'] is True:
+                    return_data = self.button_track(values, cli)
+                elif values['setstarttime'] is True and values['setstoptime'] is False:
+                    return_data = self.button_start(values, cli)
+                elif values['setstarttime'] is False and values['setstoptime'] is True:
+                    cli, result_display = error_popup("Can not only set Stop time")
+                elif values['setstarttime'] is False and values['setstoptime'] is False:
+                    values['starttime'] = ''
+                    return_data = self.button_start(values, cli)
 
-            return_data = [ cli, result_display ]
+            elif values['calendar_entry'] == []:
+                cli, result_display = error_popup("Must Select an entry in list")
+
+                return_data = [ cli, result_display ]
 
         else:
             cli = None
@@ -457,7 +470,7 @@ class TwButtonLogic:
             self.button_details(values)
             result_display = ""
         elif event == "Calendar Track":
-            cli, result_display = self.button_celendar_track(cli)
+            cli, result_display = self.button_calendar_track(cli)
         else:
             result_display = "Button not Matched"
             logging.error("******* Button not Matched '%s' *************", event)
