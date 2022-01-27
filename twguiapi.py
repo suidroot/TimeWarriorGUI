@@ -151,12 +151,13 @@ class TwButtonLogic:
 
     def run_modify_task(self, taskid: str, values: dict):
         ''' Run modification task commands '''
+        logging.debug(values)
 
         if values['starttime'] != "":
             modify_time = values['starttime']
             modify_mode = "start"
             self.execute_cli([config.CLI_BASE_COMMAND, 'modify', modify_mode, taskid, modify_time])
-        
+
         if 'stoptime' in values.keys() and values['stoptime'] != "":
             modify_time = values['stoptime']
             modify_mode = "end"
@@ -370,7 +371,7 @@ class TwButtonLogic:
                         sg.InputText(start_time.strftime("%H:%M:%S"), key='starttime') ],
                     [ sg.Text('Duration', size=(8, 1)), sg.InputText(task['duration']) ],
                     [ sg.Button('Close', size=(config.BUTTON_SIZE, 1), font=config.GLOBAL_FONT),
-                        sg.Button('Modify', size=(config.BUTTON_SIZE, 1), font=config.GLOBAL_FONT) 
+                        sg.Button('Modify', size=(config.BUTTON_SIZE, 1), font=config.GLOBAL_FONT)
                     ]
                 ]
 
@@ -380,7 +381,7 @@ class TwButtonLogic:
                 sg.InputText(stop_time.strftime("%H:%M:%S"), key='stoptime') ])
 
         event, values = sg.Window('Task Details', layout).read(close=True)
-        
+
         if event == "Modify":
             taskid = '@'+str(task['id'])
             print (taskid, values)
