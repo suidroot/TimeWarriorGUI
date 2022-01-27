@@ -149,6 +149,21 @@ class TwButtonLogic:
     ## End iCalBuddy Function
     #
 
+    def run_modify_task(self, taskid: str, values: dict):
+        ''' Run modification task commands '''
+
+        if values['starttime'] != "":
+            modify_time = values['starttime']
+            modify_mode = "start"
+            self.execute_cli([config.CLI_BASE_COMMAND, 'modify', modify_mode, taskid, modify_time])
+        
+        if 'stoptime' in values.keys() and values['stoptime'] != "":
+            modify_time = values['stoptime']
+            modify_mode = "end"
+            self.execute_cli([config.CLI_BASE_COMMAND, 'modify', modify_mode, taskid, modify_time])
+
+        return 0
+
     def collect_tasks_list(self, duration='day') -> int:
         '''
         Collect list of tracked tasks (default to today)
@@ -333,21 +348,13 @@ class TwButtonLogic:
 
     def button_modify(self, values: dict, cli: str) -> 'tuple[str, str]':
         ''' Modify start or stop time of a task '''
-        # TODO: ability to modify start and stop at time time
         task_no, _ = self.get_tw_taskid_from_timetable(values['timew_table'])
         taskid = '@'+str(task_no)
 
-        if values['starttime'] != "":
-            modify_time = values['starttime']
-            modify_mode = "start"
-        elif values['stoptime'] != "":
-            modify_time = values['stoptime']
-            modify_mode = "end"
-        else:
-            return error_popup('Please enter a time')
+        self.run_modify_task(taskid, values)
 
-        cli.extend(['modify', modify_mode, taskid, modify_time])
-        result_display = "Modified " + modify_mode + " time to " + modify_time
+        cli = None
+        result_display = "Modified Task"
 
         return cli, result_display
 
@@ -360,17 +367,24 @@ class TwButtonLogic:
         layout = [
                     [ sg.Text('Task Tag', size=(8, 1)), sg.InputText( list_to_str(task['tag']) ) ],
                     [ sg.Text('Start Time', size=(8, 1)), \
-                        sg.InputText(start_time.strftime("%H:%M:%S")) ],
+                        sg.InputText(start_time.strftime("%H:%M:%S"), key='starttime') ],
                     [ sg.Text('Duration', size=(8, 1)), sg.InputText(task['duration']) ],
-                    [ sg.Button('Close', size=(config.BUTTON_SIZE, 1), font=config.GLOBAL_FONT) ]
+                    [ sg.Button('Close', size=(config.BUTTON_SIZE, 1), font=config.GLOBAL_FONT),
+                        sg.Button('Modify', size=(config.BUTTON_SIZE, 1), font=config.GLOBAL_FONT) 
+                    ]
                 ]
 
         if 'stoptime' in task.keys():
             stop_time = utc_to_local(task['stoptime'])
             layout.insert(2, [ sg.Text('Stop Time'), \
-                sg.InputText(stop_time.strftime("%H:%M:%S")) ])
+                sg.InputText(stop_time.strftime("%H:%M:%S"), key='stoptime') ])
 
-        sg.Window('Task Details', layout).read(close=True)
+        event, values = sg.Window('Task Details', layout).read(close=True)
+        
+        if event == "Modify":
+            taskid = '@'+str(task['id'])
+            print (taskid, values)
+            self.run_modify_task(taskid, values)
 
         return 0
 
