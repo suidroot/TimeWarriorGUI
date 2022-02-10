@@ -40,6 +40,40 @@ def validate_time(time_text: str) -> bool:
 
     return return_val
 
+def input_error_check(event, values) -> int:
+    ''' Validate inoput values and return an error number of error detected '''
+
+    error_val = 0
+
+    if values['date'] != '':
+        if validate_date(values['date']):
+            sg.popup('Invalid date please use format "YYYY-MM-DD" data entered:', \
+                values['date'])
+            error_val = 1
+    if values['starttime'] != '':
+        if validate_time(values['starttime']):
+            sg.popup('Invalid date please use format "HH:MM" data entered:', \
+                values['starttime'])
+            error_val = 2
+    if values['stoptime'] != '':
+        if validate_time(values['stoptime']):
+            sg.popup('Invalid date please use format "HH:MM" data entered:', \
+                values['stoptime'])
+            error_val = 3
+    if values['duration'] != '':
+        if validate_time(values['duration']):
+            sg.popup('Invalid date please use format "HH:MM" data entered:', \
+                values['duration'])
+            error_val = 4
+    if values['stoptime'] != '' and values['starttime'] != '' and event == 'Modify':
+        sg.popup('Can only change start or end time, clear one of the fields')
+        error_val = 5
+    if (event in ('Track', 'Start')) and values['taskdesc'] == '':
+        sg.popup('Task Name Can not be Empty')
+        error_val = 6
+
+    return error_val
+
 def main():
     ''' Main Function '''
 
@@ -136,31 +170,7 @@ def main():
 
         #
         # Input Validation
-        if values['date'] != '':
-            if validate_date(values['date']):
-                sg.popup('Invalid date please use format "YYYY-MM-DD" data entered:', \
-                    values['date'])
-                continue
-        if values['starttime'] != '':
-            if validate_time(values['starttime']):
-                sg.popup('Invalid date please use format "HH:MM" data entered:', \
-                    values['starttime'])
-                continue
-        if values['stoptime'] != '':
-            if validate_time(values['stoptime']):
-                sg.popup('Invalid date please use format "HH:MM" data entered:', \
-                    values['stoptime'])
-                continue
-        if values['duration'] != '':
-            if validate_time(values['duration']):
-                sg.popup('Invalid date please use format "HH:MM" data entered:', \
-                    values['duration'])
-                continue
-        if values['stoptime'] != '' and values['starttime'] != '' and event == 'Modify':
-            sg.popup('Can only change start or end time, clear one of the fields')
-            continue
-        if (event in ('Track', 'Start')) and values['taskdesc'] == '':
-            sg.popup('Task Name Can not be Empty')
+        if input_error_check(event, values) > 0:
             continue
 
         #
