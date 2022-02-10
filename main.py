@@ -13,7 +13,7 @@ __status__ = "Production"
 import logging
 from datetime import datetime
 import PySimpleGUI as sg
-from twguiapi import TwButtonLogic
+from twguiapi import TwButtonLogic, TwCalendarClass
 import config
 
 def validate_date(date_text: str) -> bool:
@@ -80,7 +80,11 @@ def main():
     table_data = []
 
     logging.basicConfig(level=config.LOGGING_LEVEL, format=config.LOGGING_FORMAT)
-    twbuttonlogic = TwButtonLogic()
+
+    if config.ICALBUDDY_ENABLE is True:
+        twbuttonlogic = TwCalendarClass()
+    else:
+        twbuttonlogic = TwButtonLogic()
 
     input_tfields = [ "date", "starttime", "stoptime", "taskdesc", "duration" ]
     timew_summary_columns = ['Tag', 'Duration']

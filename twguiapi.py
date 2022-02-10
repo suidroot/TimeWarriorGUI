@@ -39,6 +39,19 @@ def error_popup(popup_message: str) -> 'tuple[str,str]':
 
     return cli, results_display
 
+def execute_cli(cli: str) -> str:
+    ''' Execute commands on CLI returns STDOUT '''
+
+    logging.debug("cli: %s", cli)
+
+    process = subprocess.Popen(cli, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = process.communicate()
+
+    logging.debug("stdout: %s", stdout)
+    logging.debug("stderr: %s", stderr)
+
+    return stdout
+
 class TwButtonLogic:
     ''' This class hold the logic and actions for selected buttons '''
 
@@ -49,25 +62,12 @@ class TwButtonLogic:
         ''' initialize the class '''
 
     @staticmethod
-    def execute_cli(cli: str) -> str:
-        ''' Execute commands on CLI returns STDOUT '''
-
-        logging.debug("cli: %s", cli)
-
-        process = subprocess.Popen(cli, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = process.communicate()
-
-        logging.debug("stdout: %s", stdout)
-        logging.debug("stderr: %s", stderr)
-
-        return stdout
-
-    def get_active_timer(self) -> str:
+    def get_active_timer() -> str:
         ''' Get Actively tracked task and return tag '''
 
         cli = [config.CLI_BASE_COMMAND]
 
-        stdout = self.execute_cli(cli)
+        stdout = execute_cli(cli)
         output_list = str(stdout, config.ENCODING).split("\n")
         logging.debug("output_list: %s", output_list)
 
@@ -78,90 +78,20 @@ class TwButtonLogic:
 
         return result
 
-    #
-    ## Start iCalBuddy Function
-    def run_icalbuddy(self, date_range: str, exclude_fields='url,location,notes,attendees') -> str:
-        '''
-        Run iCalBuddy Commands
-        return output as str
-        '''
-
-        cli = [config.ICALBUDDY_LOCATION,
-            '-npn', '-ea', '-nc', '-b', '',
-            '-ps', '" | "',
-            '-eep', exclude_fields,
-            '-ic', config.ICALBUDDY_CALENDAR, date_range, ]
-
-        stdout = self.execute_cli(cli)
-
-        return str(stdout, config.ENCODING)
-
-    def get_current_calendar_entry(self) -> str:
-        '''
-        Use icalbuddy to get the meeting on your calendar right now
-        '''
-        stdout = self.run_icalbuddy('eventsNow', \
-            exclude_fields='url,location,notes,attendees,datetime')
-
-        return stdout
-
-    def get_current_calendar_starttime(self) -> str:
-        '''
-        Use icalbuddy to get the start time of the currnet meeting on your calendar right now
-        '''
-        stdout = self.run_icalbuddy('eventsNow')
-
-        start_time = stdout.split("|")[1].split(" - ")[0].strip()
-        logging.debug("start_time: %s", start_time)
-
-        return start_time
-
-    def get_calendar_entries(self, date_range='today') -> list:
-        '''
-        Collect calendar entries from icalbuddy
-        returns list of lists containing task name, start time,  stop time
-        '''
-
-        return_list = []
-
-        # TODO: selectable date ranges
-        if date_range == 'today':
-            icalbuddy_command = 'eventsToday'
-
-        stdout = self.run_icalbuddy(icalbuddy_command)
-
-        output_list = stdout.split("\n")
-        for i in output_list:
-            logging.debug("i: %s", i)
-            try:
-                tag, time = i.split(" | ")
-                starttime, endtime = time.split(' - ')
-                return_list.append([tag, starttime, endtime])
-            except ValueError:
-                if i != '':
-                    logging.error("Error with calendar entry %s", i)
-                else:
-                    continue
-
-        logging.debug("return_list: %s", return_list)
-
-        return return_list
-    ## End iCalBuddy Function
-    #
-
-    def run_modify_task(self, taskid: str, values: dict):
+    @staticmethod
+    def run_modify_task(taskid: str, values: dict):
         ''' Run modification task commands '''
         logging.debug(values)
 
         if values['starttime'] != "":
             modify_time = values['starttime']
             modify_mode = "start"
-            self.execute_cli([config.CLI_BASE_COMMAND, 'modify', modify_mode, taskid, modify_time])
+            execute_cli([config.CLI_BASE_COMMAND, 'modify', modify_mode, taskid, modify_time])
 
         if 'stoptime' in values.keys() and values['stoptime'] != "":
             modify_time = values['stoptime']
             modify_mode = "end"
-            self.execute_cli([config.CLI_BASE_COMMAND, 'modify', modify_mode, taskid, modify_time])
+            execute_cli([config.CLI_BASE_COMMAND, 'modify', modify_mode, taskid, modify_time])
 
         return 0
 
@@ -176,9 +106,8 @@ class TwButtonLogic:
         table_dict = []
         date_format = "%Y%m%dT%H%M%SZ"
 
-
         cli = [config.CLI_BASE_COMMAND, 'export', ':'+duration]
-        stdout = self.execute_cli(cli)
+        stdout = execute_cli(cli)
 
         task_list = json.loads(stdout)
 
@@ -341,23 +270,11 @@ class TwButtonLogic:
         new_description = sg.popup_get_text('Rename Task', default_text=old_description)
 
         if new_description is not None:
-            self.execute_cli([config.CLI_BASE_COMMAND, 'tag', taskid, new_description])
+            execute_cli([config.CLI_BASE_COMMAND, 'tag', taskid, new_description])
             cli = [config.CLI_BASE_COMMAND, 'untag', taskid, old_description]
             result_display = "Renamed task"
         else:
             result_display= "Rename Canceled"
-
-        return cli, result_display
-
-    def button_start_meeting(self, cli: str) -> 'tuple[str, str]':
-        ''' Run Start Meeting from calendar info routine '''
-
-        calendarentry = self.get_current_calendar_entry()
-        if calendarentry:
-            cli.extend(["start", calendarentry])
-            result_display = "Started meeting"
-        else:
-            cli, result_display = error_popup('Nothing available on Calendar')
 
         return cli, result_display
 
@@ -412,6 +329,148 @@ class TwButtonLogic:
             self.run_modify_task(taskid, values)
 
         return 0
+    ##### Stop methods supporting UI button elements
+    #
+
+    def button_logic(self, event: str, values: dict) -> 'tuple[bytes, str]':
+        '''
+        Execute Button based events executing TimeWarrior CLI commands
+        Command line is extended based on the button selection and outputs
+        of the hander functions when used
+        '''
+
+        cli = [config.CLI_BASE_COMMAND]
+
+        # TODO: Fix logic to remove calendar options
+        if event == 'Start Meeting':
+            cli, result_display = self.button_start_meeting(cli)
+        elif event in 'Start':
+            cli, result_display = self.button_start(values, cli)
+        elif event == 'Track':
+            cli, result_display = self.button_track(values, cli)
+        elif event == 'Stop':
+            cli, result_display = self.button_stop(values, cli)
+        elif event == "Modify":
+            # Modify start of current / last task
+            cli, result_display = self.button_modify(values, cli)
+        elif event == "Fix Start":
+            start_time = self.get_current_calendar_starttime()
+            cli.extend(['modify', 'start', '@1', start_time])
+            result_display = "Modified Start time to " + start_time
+        elif event == "Rename":
+            cli, result_display = self.button_rename(values, cli)
+        elif event in ('Continue', "Delete"):
+            cli, result_display = self.button_continue_delete(event, values, cli)
+        elif event == "Refresh":
+            result_display = "Default: See Results"
+        elif event == "Details":
+            self.button_details(values)
+            result_display = ""
+        elif event == "Calendar Track":
+            cli, result_display = self.button_calendar_track(cli)
+        else:
+            result_display = "Button not Matched"
+            logging.error("******* Button not Matched '%s' *************", event)
+
+        if cli:
+            # TODO: Run more then one command
+            result = execute_cli(cli)
+        else:
+            # return null bytes for CLI output if cli is not set
+            result = b''
+
+        return result, result_display
+
+class TwCalendarClass(TwButtonLogic):
+    ''' This class adds iCalBuddy functionality '''
+
+    def __init__(self):
+        ''' initialize the class '''
+        TwButtonLogic.__init__(self)
+
+    #
+    ## Start iCalBuddy Function
+    @staticmethod
+    def run_icalbuddy(date_range: str, exclude_fields='url,location,notes,attendees') -> str:
+        '''
+        Run iCalBuddy Commands
+        return output as str
+        '''
+
+        cli = [config.ICALBUDDY_LOCATION,
+            '-npn', '-ea', '-nc', '-b', '',
+            '-ps', '" | "',
+            '-eep', exclude_fields,
+            '-ic', config.ICALBUDDY_CALENDAR, date_range, ]
+
+        stdout = execute_cli(cli)
+
+        return str(stdout, config.ENCODING)
+
+    def get_current_calendar_entry(self) -> str:
+        '''
+        Use icalbuddy to get the meeting on your calendar right now
+        '''
+        stdout = self.run_icalbuddy('eventsNow', \
+            exclude_fields='url,location,notes,attendees,datetime')
+
+        return stdout
+
+    def get_current_calendar_starttime(self) -> str:
+        '''
+        Use icalbuddy to get the start time of the currnet meeting on your calendar right now
+        '''
+        stdout = self.run_icalbuddy('eventsNow')
+
+        start_time = stdout.split("|")[1].split(" - ")[0].strip()
+        logging.debug("start_time: %s", start_time)
+
+        return start_time
+
+    def get_calendar_entries(self, date_range='today') -> list:
+        '''
+        Collect calendar entries from icalbuddy
+        returns list of lists containing task name, start time,  stop time
+        '''
+
+        return_list = []
+
+        # TODO: selectable date ranges
+        if date_range == 'today':
+            icalbuddy_command = 'eventsToday'
+
+        stdout = self.run_icalbuddy(icalbuddy_command)
+
+        output_list = stdout.split("\n")
+        for i in output_list:
+            logging.debug("i: %s", i)
+            try:
+                tag, time = i.split(" | ")
+                starttime, endtime = time.split(' - ')
+                return_list.append([tag, starttime, endtime])
+            except ValueError:
+                if i != '':
+                    logging.error("Error with calendar entry %s", i)
+                else:
+                    continue
+
+        logging.debug("return_list: %s", return_list)
+
+        return return_list
+    ## End iCalBuddy Function
+    #
+
+    def button_start_meeting(self, cli: str) -> 'tuple[str, str]':
+        ''' Run Start Meeting from calendar info routine '''
+
+        calendarentry = self.get_current_calendar_entry()
+        if calendarentry:
+            cli.extend(["start", calendarentry])
+            result_display = "Started meeting"
+        else:
+            cli, result_display = error_popup('Nothing available on Calendar')
+
+        return cli, result_display
 
     def button_calendar_track(self, cli: str) -> list:
         ''' Create Task based on calendar entry from today '''
@@ -458,12 +517,10 @@ class TwButtonLogic:
                 elif values['setstarttime'] is False and values['setstoptime'] is False:
                     values['starttime'] = ''
                     return_data = self.button_start(values, cli)
-
             elif values['calendar_entry'] == []:
                 cli, result_display = error_popup("Must Select an entry in list")
 
                 return_data = [ cli, result_display ]
-
         else:
             cli = None
             result_display = "Canceled"
@@ -471,58 +528,6 @@ class TwButtonLogic:
             return_data = [ cli, result_display ]
 
         return return_data
-
-    ##### Stop methods supporting UI button elements
-    #
-
-    def button_logic(self, event: str, values: dict) -> 'tuple[bytes, str]':
-        '''
-        Execute Button based events executing TimeWarrior CLI commands
-        Command line is extended based on the button selection and outputs
-        of the hander functions when used
-        '''
-
-        cli = [config.CLI_BASE_COMMAND]
-
-        if event == 'Start Meeting':
-            cli, result_display = self.button_start_meeting(cli)
-        elif event in 'Start':
-            cli, result_display = self.button_start(values, cli)
-        elif event == 'Track':
-            cli, result_display = self.button_track(values, cli)
-        elif event == 'Stop':
-            cli, result_display = self.button_stop(values, cli)
-        elif event == "Modify":
-            # Modify start of current / last task
-            cli, result_display = self.button_modify(values, cli)
-        elif event == "Fix Start":
-            start_time = self.get_current_calendar_starttime()
-            cli.extend(['modify', 'start', '@1', start_time])
-            result_display = "Modified Start time to " + start_time
-        elif event == "Rename":
-            cli, result_display = self.button_rename(values, cli)
-        elif event in ('Continue', "Delete"):
-            cli, result_display = self.button_continue_delete(event, values, cli)
-        elif event == "Refresh":
-            result_display = "Default: See Results"
-        elif event == "Details":
-            self.button_details(values)
-            result_display = ""
-        elif event == "Calendar Track":
-            cli, result_display = self.button_calendar_track(cli)
-        else:
-            result_display = "Button not Matched"
-            logging.error("******* Button not Matched '%s' *************", event)
-
-        if cli:
-            # TODO: Run more then one command
-            result = self.execute_cli(cli)
-        else:
-            # return null bytes for CLI output if cli is not set
-            result = b''
-
-        return result, result_display
-
 
 ####### Start Main Function #############
 if __name__ == "__main__":
