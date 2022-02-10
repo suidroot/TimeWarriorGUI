@@ -279,17 +279,28 @@ class TwButtonLogic:
         ''' Run buttons starting with "Track" '''
         date_format = "%H:%M"
 
-
+        # Set trakcing start or stop time based duration
         if values['duration'] != '':
-            logging.debug("%s %s", values['starttime'], values['duration'])
+            if values['starttime'] != '':
+                logging.debug("%s %s", values['starttime'], values['duration'])
 
-            dt_startime = datetime.strptime(values['starttime'], date_format)
-            delta_hours, delta_minutes = values['duration'].split(":")
-            dt_stoptime = dt_startime + timedelta(hours=int(delta_hours), \
-                minutes=int(delta_minutes))
-            values['stoptime'] = datetime.strftime(dt_stoptime, '%H:%M')
+                dt_startime = datetime.strptime(values['starttime'], date_format)
+                delta_hours, delta_minutes = values['duration'].split(":")
+                dt_stoptime = dt_startime + timedelta(hours=int(delta_hours), \
+                    minutes=int(delta_minutes))
+                values['stoptime'] = datetime.strftime(dt_stoptime, '%H:%M')
 
-            logging.debug(values['stoptime'])
+                logging.debug(values['stoptime'])
+            elif values['stoptime'] != '':
+                logging.debug("%s %s", values['stoptime'], values['duration'])
+
+                dt_stoptime = datetime.strptime(values['stoptime'], date_format)
+                delta_hours, delta_minutes = values['duration'].split(":")
+                dt_starttime = dt_stoptime - timedelta(hours=int(delta_hours), \
+                    minutes=int(delta_minutes))
+                values['starttime'] = datetime.strftime(dt_starttime, '%H:%M')
+
+                logging.debug(values['starttime'])
 
         if values['date'] != '':
             starttime = values['date'] + "T" + values['starttime']
@@ -397,7 +408,7 @@ class TwButtonLogic:
 
         if event == "Modify":
             taskid = '@'+str(task['id'])
-            print (taskid, values)
+            logging.debug(taskid, values)
             self.run_modify_task(taskid, values)
 
         return 0
