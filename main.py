@@ -48,7 +48,7 @@ def main():
     logging.basicConfig(level=config.LOGGING_LEVEL, format=config.LOGGING_FORMAT)
     twbuttonlogic = TwButtonLogic()
 
-    input_tfields = [ "date", "starttime", "stoptime", "taskdesc" ]
+    input_tfields = [ "date", "starttime", "stoptime", "taskdesc", "duration" ]
     timew_summary_columns = ['Tag', 'Duration']
 
     #
@@ -79,6 +79,9 @@ def main():
                 [ sg.Text("Stop time:", size=(8, 1), font=config.GLOBAL_FONT), \
                     sg.Input(key="stoptime", size=(12,1), font=config.GLOBAL_FONT), \
                     sg.Text("EX: 15:00", font=config.GLOBAL_FONT) ],
+                [ sg.Text("Duration:", size=(8, 1), font=config.GLOBAL_FONT), \
+                    sg.Input(key="duration", size=(12,1), font=config.GLOBAL_FONT), \
+                    sg.Text("EX: 0:20", font=config.GLOBAL_FONT) ],
                 [ sg.Text("Date:", size=(8, 1), font=config.GLOBAL_FONT), \
                     sg.Input(key="date", size=(12,1), font=config.GLOBAL_FONT), \
                     sg.Text("EX: 2020-10-01", size=(16,1), font=config.GLOBAL_FONT) ]
@@ -95,7 +98,7 @@ def main():
             [ sg.Button('Refresh', size=(config.BUTTON_SIZE, 1), font=config.GLOBAL_FONT), ],
             # Calendar Buttons inserted here if enabled
             # Text Boxes
-            [ sg.Text("Current Tracking:", size=(13,1), font=config.GLOBAL_FONT), 
+            [ sg.Text("Current Tracking:", size=(13,1), font=config.GLOBAL_FONT),
               sg.Input(key="curr_tracking", size=(27,1), default_text=active_timer, \
                   font=config.GLOBAL_FONT) ],
             [ sg.MLine(key="cliout", size=(40,8), font=config.GLOBAL_FONT) ],
@@ -147,6 +150,11 @@ def main():
             if validate_time(values['stoptime']):
                 sg.popup('Invalid date please use format "HH:MM" data entered:', \
                     values['stoptime'])
+                continue
+        if values['duration'] != '':
+            if validate_time(values['duration']):
+                sg.popup('Invalid date please use format "HH:MM" data entered:', \
+                    values['duration'])
                 continue
         if values['stoptime'] != '' and values['starttime'] != '' and event == 'Modify':
             sg.popup('Can only change start or end time, clear one of the fields')

@@ -13,7 +13,7 @@ __status__ = "Production"
 import subprocess
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import PySimpleGUI as sg
 import config
 
@@ -277,6 +277,19 @@ class TwButtonLogic:
     @staticmethod
     def button_track(values: dict, cli: str) -> 'tuple[str, str]':
         ''' Run buttons starting with "Track" '''
+        date_format = "%H:%M"
+
+
+        if values['duration'] != '':
+            logging.debug("%s %s", values['starttime'], values['duration'])
+
+            dt_startime = datetime.strptime(values['starttime'], date_format)
+            delta_hours, delta_minutes = values['duration'].split(":")
+            dt_stoptime = dt_startime + timedelta(hours=int(delta_hours), \
+                minutes=int(delta_minutes))
+            values['stoptime'] = datetime.strftime(dt_stoptime, '%H:%M')
+
+            logging.debug(values['stoptime'])
 
         if values['date'] != '':
             starttime = values['date'] + "T" + values['starttime']
