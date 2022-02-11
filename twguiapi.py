@@ -209,7 +209,7 @@ class TwButtonLogic:
         date_format = "%H:%M"
 
         # Set trakcing start or stop time based duration
-        if values['duration'] != '':
+        if 'duration' in values.keys() and values['duration'] != '':
             if values['starttime'] != '':
                 logging.debug("%s %s", values['starttime'], values['duration'])
 
